@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { verifySessionToken, SESSION_COOKIE_NAME } from "@/lib/server/auth/session";
 
-export function middleware(request: NextRequest) {
+export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   // Only protect /client/* routes (exclude /client/login and /client/signup)
@@ -9,26 +10,19 @@ export function middleware(request: NextRequest) {
     !pathname.startsWith("/client/login") &&
     !pathname.startsWith("/client/signup")
   ) {
-    const sessionCookie = request.cookies.get("sb_client_session");
-
-    if (!sessionCookie || !sessionCookie.value) {
-      const loginUrl = new URL("/client/login", request.url);
-      loginUrl.searchParams.set("from", pathname);
-      return NextResponse.redirect(loginUrl);
-    }
-
-    try {
-      const session = JSON.parse(decodeURIComponent(sessionCookie.value));
-      if (!session || session.role !== "client") {
-        const loginUrl = new URL("/client/login", request.url);
-        loginUrl.searchParams.set("from", pathname);
-        return NextResponse.redirect(loginUrl);
+    // 1. Check authoritative production session cookie (sb_session)
+    const sessionCookie = request.cookies.get(SESSION_COOKIE_NAME);
+    if (sessionCookie?.value) {
+      const payload = await verifySessionToken(sessionCookie.value);
+      if (payload && payload.role === "CLIENT") {
+        return NextResponse.next();
       }
-    } catch {
-      const loginUrl = new URL("/client/login", request.url);
-      loginUrl.searchParams.set("from", pathname);
-      return NextResponse.redirect(loginUrl);
     }
+
+
+    const loginUrl = new URL("/client/login", request.url);
+    loginUrl.searchParams.set("from", pathname);
+    return NextResponse.redirect(loginUrl);
   }
 
   return NextResponse.next();

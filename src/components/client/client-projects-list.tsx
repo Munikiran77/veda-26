@@ -4,11 +4,9 @@ import React, { useState, useMemo, useEffect } from "react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { useClientAuth } from "./client-auth-context";
-import {
-  clientProjectsRepository,
-  type ClientProjectItem,
-} from "@/lib/client-projects-repository";
-import { type ProjectStatus } from "@/types";
+import { apiClient } from "@/lib/api-client";
+import { mapProject } from "@/lib/api-mappers";
+import { type Project, type ProjectStatus } from "@/types";
 
 const FILTERS: { label: string; value: "All" | ProjectStatus }[] = [
   { label: "All", value: "All" },
@@ -21,21 +19,28 @@ const FILTERS: { label: string; value: "All" | ProjectStatus }[] = [
 export function ClientProjectsList() {
   const { user } = useClientAuth();
   const [activeFilter, setActiveFilter] = useState<"All" | ProjectStatus>("All");
-  const [projects, setProjects] = useState<ClientProjectItem[]>(() =>
-    clientProjectsRepository.getAllProjects(user?.id)
-  );
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const handleProjectsUpdated = () => {
-      setProjects(clientProjectsRepository.getAllProjects(user?.id));
-    };
-
-    window.addEventListener("skillbridge_data_updated", handleProjectsUpdated);
-    window.addEventListener("storage", handleProjectsUpdated);
-
+    let isMounted = true;
+    async function loadProjects() {
+      try {
+        setIsLoading(true);
+        const queryParams = user?.id ? { clientId: user.id } : undefined;
+        const data = await apiClient.get<any[]>("/api/projects", queryParams);
+        if (isMounted && Array.isArray(data)) {
+          setProjects(data.map(mapProject));
+        }
+      } catch (err) {
+        console.error("Failed to load client projects:", err);
+      } finally {
+        if (isMounted) setIsLoading(false);
+      }
+    }
+    loadProjects();
     return () => {
-      window.removeEventListener("skillbridge_data_updated", handleProjectsUpdated);
-      window.removeEventListener("storage", handleProjectsUpdated);
+      isMounted = false;
     };
   }, [user?.id]);
 
@@ -130,7 +135,14 @@ export function ClientProjectsList() {
       </div>
 
       {/* Projects Grid or Empty State */}
-      {filteredProjects.length === 0 ? (
+      {isLoading ? (
+        <div className="flex flex-col items-center justify-center py-20 text-center">
+          <div className="h-8 w-8 animate-spin rounded-full border-2 border-[var(--color-text-primary)] border-t-transparent" />
+          <span className="mt-3 text-[13px] font-medium text-[var(--color-text-secondary)]">
+            Loading your projects...
+          </span>
+        </div>
+      ) : filteredProjects.length === 0 ? (
         <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-[var(--color-border-subtle)] bg-[var(--color-canvas-bg)] p-8 sm:p-12 text-center">
           <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-[var(--color-canvas-surface)] text-[var(--color-text-tertiary)]">
             <svg

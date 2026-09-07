@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { navItems, studentProfile } from "@/data/student";
+import { useStudentAuth } from "@/components/student/student-auth-context";
 import {
   LayoutDashboard,
   Search,
@@ -32,6 +33,7 @@ interface StudentSidebarProps {
 
 export function StudentSidebar({ isOpen, onClose }: StudentSidebarProps) {
   const pathname = usePathname();
+  const { user } = useStudentAuth();
 
   const sidebarContent = (
     <div className="flex h-full flex-col">
@@ -84,14 +86,14 @@ export function StudentSidebar({ isOpen, onClose }: StudentSidebarProps) {
       <div className="border-t border-[var(--color-border-subtle)] p-4">
         <div className="flex items-center gap-3">
           <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-violet-500 text-sm font-semibold text-white flex-shrink-0">
-            {studentProfile.avatar}
+            {user?.avatar || studentProfile.avatar}
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-sm font-semibold text-[var(--color-text-primary)] truncate">
-              {studentProfile.name}
+              {user?.name || studentProfile.name}
             </p>
             <p className="text-xs text-[var(--color-text-secondary)] truncate">
-              {studentProfile.major}
+              {user?.studentProfile?.college || studentProfile.major}
             </p>
           </div>
           <button

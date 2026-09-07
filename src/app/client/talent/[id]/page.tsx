@@ -1,38 +1,37 @@
 import React from "react";
 import type { Metadata } from "next";
 import Link from "next/link";
-import { studentTalentRepository } from "@/lib/student-talent-repository";
+import { getStudentById } from "@/lib/server/students/service";
+import { mapTalentStudent } from "@/lib/api-mappers";
 import { StudentProfileView } from "@/components/client";
+
+export const dynamic = "force-dynamic";
 
 interface PageProps {
   params: Promise<{ id: string }>;
 }
 
-export async function generateStaticParams() {
-  return studentTalentRepository.getAllStudents().map((s) => ({ id: s.id }));
-}
-
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { id } = await params;
-  const student = studentTalentRepository.getStudentById(id);
+  const result = await getStudentById(id);
 
-  if (!student) {
+  if ("error" in result || !result.student) {
     return {
       title: "Student Not Found | Client Portal",
     };
   }
 
   return {
-    title: `${student.name} (${student.headline}) | Student Profile | SkillBridge`,
-    description: student.bio,
+    title: `${result.student.name} (${result.student.headline}) | Student Profile | SkillBridge`,
+    description: result.student.about,
   };
 }
 
 export default async function StudentDetailPage({ params }: PageProps) {
   const { id } = await params;
-  const student = studentTalentRepository.getStudentById(id);
+  const result = await getStudentById(id);
 
-  if (!student) {
+  if ("error" in result || !result.student) {
     return (
       <div className="max-w-2xl mx-auto py-12 text-center space-y-4">
         <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-[var(--color-canvas-surface)] text-[var(--color-text-tertiary)]">
@@ -69,6 +68,8 @@ export default async function StudentDetailPage({ params }: PageProps) {
       </div>
     );
   }
+
+  const student = mapTalentStudent(result.student);
 
   return <StudentProfileView student={student} />;
 }

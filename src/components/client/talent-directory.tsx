@@ -1,9 +1,11 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
-import { studentTalentRepository } from "@/lib/student-talent-repository";
+import { apiClient } from "@/lib/api-client";
+import { mapTalentStudent } from "@/lib/api-mappers";
+import { Loader2, AlertCircle } from "lucide-react";
 
 const EXPERTISE_OPTIONS = [
   "All Categories",
@@ -42,15 +44,28 @@ export function TalentDirectory() {
   const [selectedAvailability, setSelectedAvailability] = useState("All Availabilities");
   const [selectedSkill, setSelectedSkill] = useState<string | null>(null);
 
-  // Filter and Search Logic via repository
-  const filteredTalent = useMemo(() => {
-    return studentTalentRepository.filterStudents({
-      searchQuery,
-      expertise: selectedExpertise,
-      experience: selectedExperience,
-      availability: selectedAvailability,
-      skill: selectedSkill || undefined,
-    });
+  const [students, setStudents] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const fetchStudents = useCallback(async () => {
+    try {
+      setIsLoading(true);
+      setError(null);
+      const params: Record<string, string> = {};
+      if (searchQuery.trim()) params.search = searchQuery.trim();
+      if (selectedExpertise !== "All Categories") params.expertise = selectedExpertise;
+      if (selectedExperience !== "All Levels") params.experience = selectedExperience;
+      if (selectedAvailability !== "All Availabilities") params.availability = selectedAvailability;
+      if (selectedSkill) params.skill = selectedSkill;
+
+      const data = await apiClient.get<any[]>("/api/students", params);
+      setStudents((data || []).map(mapTalentStudent));
+    } catch (err: any) {
+      setError(err?.message || "Failed to load talent directory.");
+    } finally {
+      setIsLoading(false);
+    }
   }, [
     searchQuery,
     selectedExpertise,
@@ -58,6 +73,10 @@ export function TalentDirectory() {
     selectedAvailability,
     selectedSkill,
   ]);
+
+  useEffect(() => {
+    fetchStudents();
+  }, [fetchStudents]);
 
   const resetFilters = () => {
     setSearchQuery("");
@@ -248,15 +267,33 @@ export function TalentDirectory() {
       {/* Results Count Bar */}
       <div className="flex items-center justify-between text-[13px] text-[var(--color-text-secondary)] px-1">
         <span>
-          Showing <span className="font-semibold text-[var(--color-text-primary)]">{filteredTalent.length}</span> verified student {filteredTalent.length === 1 ? "profile" : "profiles"}
+          Showing <span className="font-semibold text-[var(--color-text-primary)]">{students.length}</span> verified student {students.length === 1 ? "profile" : "profiles"}
         </span>
         <span className="text-[12px] text-[var(--color-text-tertiary)]">
           Zero fake metrics &bull; Real verified coursework &amp; portfolio links
         </span>
       </div>
 
-      {/* Talent Cards Grid or Empty State */}
-      {filteredTalent.length === 0 ? (
+      {/* Talent Cards Grid or States */}
+      {isLoading ? (
+        <div className="flex flex-col items-center justify-center py-20 rounded-2xl border border-[var(--color-border-subtle)] bg-[var(--color-canvas-bg)] p-8 text-center space-y-3">
+          <Loader2 className="h-7 w-7 animate-spin text-[var(--color-text-tertiary)]" />
+          <p className="text-[13px] sm:text-[14px] text-[var(--color-text-secondary)]">Loading talent directory...</p>
+        </div>
+      ) : error ? (
+        <div className="flex flex-col items-center justify-center py-16 rounded-2xl border border-dashed border-red-200 bg-red-50/50 p-8 text-center space-y-3">
+          <AlertCircle className="h-7 w-7 text-red-500" />
+          <h3 className="text-[15px] font-semibold text-[var(--color-text-primary)]">Unable to load students</h3>
+          <p className="text-[13px] text-[var(--color-text-secondary)] max-w-sm">{error}</p>
+          <button
+            type="button"
+            onClick={fetchStudents}
+            className="mt-2 inline-flex h-8 items-center justify-center rounded-full bg-[var(--color-text-primary)] px-4 text-[12px] font-medium text-white hover:bg-black"
+          >
+            Retry
+          </button>
+        </div>
+      ) : students.length === 0 ? (
         <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-[var(--color-border-subtle)] bg-[var(--color-canvas-bg)] p-8 sm:p-12 text-center">
           <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-[var(--color-canvas-surface)] text-[var(--color-text-tertiary)]">
             <svg
@@ -289,7 +326,7 @@ export function TalentDirectory() {
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-          {filteredTalent.map((student) => (
+          {students.map((student) => (
             <div
               key={student.id}
               className="flex flex-col justify-between rounded-2xl border border-[var(--color-border-subtle)] bg-[var(--color-canvas-bg)] p-5 sm:p-6 shadow-2xs transition-all hover:border-[var(--color-border-hover)] hover:shadow-xs space-y-4"
@@ -338,7 +375,7 @@ export function TalentDirectory() {
 
                 {/* Skills Badges */}
                 <div className="flex flex-wrap gap-1.5 pt-0.5">
-                  {student.skills.map((skill) => (
+                  {student.skills.map((skill: string) => (
                     <span
                       key={skill}
                       className="inline-flex items-center rounded-lg border border-[var(--color-border-subtle)] bg-[var(--color-canvas-bg)] px-2.5 py-1 text-[11px] font-medium text-[var(--color-text-secondary)]"

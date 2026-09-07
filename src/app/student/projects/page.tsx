@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Filter, X } from "lucide-react";
 import { StudentLayout } from "@/components/student/StudentLayout";
@@ -11,8 +11,9 @@ import {
   FullProjectCard,
   ProjectEmptyState,
 } from "@/components/student";
-import { useSharedProjects } from "@/lib/shared-repository";
-import type { ProjectFilters as FiltersType, SortOption } from "@/types";
+import { apiClient } from "@/lib/api-client";
+import { mapProject } from "@/lib/api-mappers";
+import type { Project, ProjectFilters as FiltersType, SortOption } from "@/types";
 
 const INITIAL_FILTERS: FiltersType = {
   category: null,
@@ -27,14 +28,40 @@ export default function FindProjectsPage() {
   const [sortOption, setSortOption] = useState<SortOption>("Recommended");
   const [filters, setFilters] = useState<FiltersType>(INITIAL_FILTERS);
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
+  const [allProjects, setAllProjects] = useState<Project[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   const handleClearFilters = () => {
     setFilters(INITIAL_FILTERS);
     setSearchQuery("");
   };
 
-  // Filter and sort logic
-  const allProjects = useSharedProjects();
+  useEffect(() => {
+    let isMounted = true;
+    async function loadProjects() {
+      try {
+        setIsLoading(true);
+        setError(null);
+        const data = await apiClient.get<any[]>("/api/projects");
+        if (isMounted) {
+          setAllProjects((data || []).map(mapProject));
+        }
+      } catch (err: any) {
+        if (isMounted) {
+          setError(err.message || "Failed to load projects.");
+        }
+      } finally {
+        if (isMounted) {
+          setIsLoading(false);
+        }
+      }
+    }
+    loadProjects();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
   const filteredProjects = useMemo(() => {
     let result = [...allProjects];
 
@@ -219,7 +246,24 @@ export default function FindProjectsPage() {
               </div>
             )}
 
-            {filteredProjects.length === 0 ? (
+            {isLoading ? (
+              <div className="flex flex-col items-center justify-center py-24 text-center">
+                <div className="h-8 w-8 animate-spin rounded-full border-2 border-[var(--color-text-primary)] border-t-transparent" />
+                <p className="mt-4 text-sm text-[var(--color-text-secondary)]">
+                  Loading live projects from SkillBridge...
+                </p>
+              </div>
+            ) : error ? (
+              <div className="rounded-2xl border border-red-200 bg-red-50/50 p-8 text-center">
+                <p className="text-sm font-semibold text-red-700">{error}</p>
+                <button
+                  onClick={() => window.location.reload()}
+                  className="mt-4 rounded-xl bg-red-600 px-4 py-2 text-xs font-semibold text-white hover:bg-red-700"
+                >
+                  Retry
+                </button>
+              </div>
+            ) : filteredProjects.length === 0 ? (
               <ProjectEmptyState onClear={handleClearFilters} />
             ) : (
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">

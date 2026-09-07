@@ -4,8 +4,8 @@ import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, ArrowRight, CheckCircle2 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import type { Project, Application } from "@/types";
-import { sharedRepository } from "@/lib/shared-repository";
+import type { Project } from "@/types";
+import { apiClient } from "@/lib/api-client";
 
 interface ApplyModalProps {
   isOpen: boolean;
@@ -33,42 +33,33 @@ export function ApplyModal({ isOpen, onClose, project, onSuccess }: ApplyModalPr
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const [serverError, setServerError] = useState<string | null>(null);
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setServerError(null);
     if (!validate()) return;
 
     setIsSubmitting(true);
-    setTimeout(() => {
-      setIsSubmitting(false);
-
-      const existingApps = sharedRepository.getApplications();
-      const alreadyApplied = existingApps.some(a => a.projectId === project.id && a.studentId === "student-1");
-      if (alreadyApplied) {
-        alert("Already Applied");
-        return;
-      }
-      
-      const newApp: Application = {
-        id: `app-${Date.now()}`,
-        projectId: project.id,
-        studentId: "student-1",
-        status: "Pending",
-        proposal: proposal,
-        proposedBudget: `₹${budget}`,
+    try {
+      await apiClient.post(`/api/projects/${project.id}/applications`, {
+        proposal: proposal.trim(),
+        proposedBudget: `₹${budget.trim()}`,
         estimatedCompletion: duration,
-        appliedAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-        name: "Alex Johnson",
-        avatarInitials: "AJ",
-        headline: "Frontend Developer",
-        college: "State University",
-        relevantSkills: project.skills,
-        portfolioSummary: "Great projects in React and Next.js",
-      };
-      
-      sharedRepository.saveApplication(newApp);
+      });
+
       onSuccess();
-    }, 500);
+    } catch (err: any) {
+      if (err.status === 409 || err.code === "DUPLICATE_APPLICATION") {
+        setServerError("You have already submitted an application to this project.");
+      } else if (err.status === 401) {
+        setServerError("You must be logged in as a student to apply.");
+      } else {
+        setServerError(err.message || "Failed to submit application. Please try again.");
+      }
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -107,6 +98,11 @@ export function ApplyModal({ isOpen, onClose, project, onSuccess }: ApplyModalPr
             </div>
 
             <div className="max-h-[70vh] overflow-y-auto px-6 py-6">
+              {serverError && (
+                <div className="mb-5 rounded-xl border border-red-200 bg-red-50 p-3.5 text-xs font-semibold text-red-700">
+                  {serverError}
+                </div>
+              )}
               <form id="apply-form" onSubmit={handleSubmit} className="flex flex-col gap-6">
                 
                 {/* Proposal */}

@@ -1,6 +1,6 @@
 "use client";
 
-import { use, useState } from "react";
+import { use, useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { ArrowLeft, SearchX, Clock, CheckCircle2 } from "lucide-react";
@@ -15,10 +15,10 @@ import {
   SubmissionSuccess,
   WorkProjectProgress,
 } from "@/components/student/work";
-import { getWorkProject } from "@/data/work";
-import { sharedRepository } from "@/lib/shared-repository";
+import { apiClient } from "@/lib/api-client";
+import { mapWorkContract } from "@/lib/api-mappers";
 import { cn } from "@/lib/utils";
-import type { WorkStatus, WorkProject } from "@/types";
+import type { WorkStatus, WorkProject, Project } from "@/types";
 
 interface WorkspacePageProps {
   params: Promise<{ id: string }>;
@@ -30,45 +30,55 @@ const statusStyles: Record<WorkStatus, string> = {
   "Completed": "bg-emerald-50 text-emerald-700 border-emerald-100",
 };
 
+type WorkWithProject = WorkProject & { project: Project };
+
 export default function WorkspacePage({ params }: WorkspacePageProps) {
   const router = useRouter();
   const { id } = use(params);
 
-  // Local state to simulate workflow
-  const [workData] = useState(() => {
-    let w = getWorkProject(id);
-    if (!w && id.startsWith("work-derived-")) {
-      const appId = id.replace("work-derived-", "");
-      const app = sharedRepository.getApplications().find(a => a.id === appId);
-      if (app) {
-        const project = sharedRepository.getProjects().find(p => p.id === app.projectId);
-        if (project) {
-          w = {
-            id,
-            projectId: app.projectId,
-            studentId: app.studentId,
-            clientId: project.clientId,
-            status: "In Progress",
-            progress: 0,
-            lastActivity: "Project started",
-            milestones: [],
-            deliverables: [],
-            recentActivity: [],
-            project
-          };
-        }
-      }
-    }
-    return w as WorkProject & { project: any };
-  });
+  const [workData, setWorkData] = useState<WorkWithProject | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
   const [isSubmitModalOpen, setIsSubmitModalOpen] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
+  const [currentStatus, setCurrentStatus] = useState<WorkStatus>("In Progress");
+  const [progress, setProgress] = useState(0);
 
-  // Derive status from local state (mocking the submission)
-  const [currentStatus, setCurrentStatus] = useState<WorkStatus>(
-    workData?.status || "In Progress"
-  );
-  const [progress, setProgress] = useState(workData?.progress || 0);
+  useEffect(() => {
+    let isMounted = true;
+    async function loadContract() {
+      try {
+        setIsLoading(true);
+        const data = await apiClient.get<any>(`/api/work/${id}`);
+        if (isMounted && data) {
+          const mapped = mapWorkContract(data);
+          setWorkData(mapped);
+          setCurrentStatus(mapped.status);
+          setProgress(mapped.progress);
+        }
+      } catch (err) {
+        console.error("Failed to load work contract:", err);
+      } finally {
+        if (isMounted) setIsLoading(false);
+      }
+    }
+    loadContract();
+    return () => {
+      isMounted = false;
+    };
+  }, [id]);
+
+  if (isLoading) {
+    return (
+      <StudentLayout title="Workspace">
+        <div className="flex h-[60vh] flex-col items-center justify-center text-center">
+          <div className="h-8 w-8 animate-spin rounded-full border-2 border-[var(--color-text-primary)] border-t-transparent" />
+          <p className="mt-4 text-sm text-[var(--color-text-secondary)]">
+            Loading workspace...
+          </p>
+        </div>
+      </StudentLayout>
+    );
+  }
 
   if (!workData) {
     return (
@@ -94,14 +104,22 @@ export default function WorkspacePage({ params }: WorkspacePageProps) {
 
   const { project, ...work } = workData;
 
-  const handleSubmitSuccess = () => {
-    const updatedWork = { ...workData, status: "Awaiting Review" as WorkStatus, progress: 100 };
-    sharedRepository.saveWorkProject(updatedWork);
-    setIsSubmitModalOpen(false);
-    setCurrentStatus("Awaiting Review");
-    setProgress(100);
-    setShowSuccess(true);
-    window.scrollTo({ top: 0, behavior: "smooth" });
+  const handleSubmitSuccess = async () => {
+    try {
+      await apiClient.patch(`/api/work/${id}`, {
+        status: "AWAITING_REVIEW",
+        progress: 100,
+        lastActivity: "Deliverables submitted for review",
+      });
+
+      setIsSubmitModalOpen(false);
+      setCurrentStatus("Awaiting Review");
+      setProgress(100);
+      setShowSuccess(true);
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    } catch (err: any) {
+      alert(err.message || "Failed to submit work.");
+    }
   };
 
   return (
@@ -122,9 +140,9 @@ export default function WorkspacePage({ params }: WorkspacePageProps) {
 
         {showSuccess ? (
           <div className="mt-8 mb-8">
-            <SubmissionSuccess 
-              onBack={() => router.push("/student/work")} 
-              clientName={project.client || "Client"} 
+            <SubmissionSuccess
+              onBack={() => router.push("/student/work")}
+              clientName={project.client || "Client"}
             />
           </div>
         ) : (
@@ -142,7 +160,7 @@ export default function WorkspacePage({ params }: WorkspacePageProps) {
                   <span className="h-1 w-1 rounded-full bg-[var(--color-border-subtle)]" />
                   <span className="flex items-center gap-1">
                     <Clock size={14} />
-                    Deadline: <span className="font-medium text-[var(--color-text-primary)]">{project.deadline}</span>
+                    Deadline: <span className="font-medium text-[var(--color-text-primary)]">{project.deadline || "Flexible"}</span>
                   </span>
                 </div>
               </div>
@@ -176,7 +194,7 @@ export default function WorkspacePage({ params }: WorkspacePageProps) {
               <div>
                 <ClientNotes notes={work.clientNotes} />
                 <RecentActivity activities={work.recentActivity} />
-                
+
                 {/* Submit Action */}
                 {currentStatus === "In Progress" && (
                   <div className="mt-8 rounded-2xl border border-[var(--color-border-subtle)] bg-[var(--color-canvas-surface)] p-5">

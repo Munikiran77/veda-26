@@ -7,7 +7,18 @@ export const applicationStateMachine = {
     if (role === "CLIENT") {
       switch (currentStatus) {
         case "Pending":
-          return newStatus === "Shortlisted" || newStatus === "Rejected";
+          return (
+            newStatus === "Under Review" ||
+            newStatus === "Shortlisted" ||
+            newStatus === "Accepted" ||
+            newStatus === "Rejected"
+          );
+        case "Under Review":
+          return (
+            newStatus === "Shortlisted" ||
+            newStatus === "Accepted" ||
+            newStatus === "Rejected"
+          );
         case "Shortlisted":
           return newStatus === "Accepted" || newStatus === "Rejected";
         case "Accepted":
@@ -18,6 +29,7 @@ export const applicationStateMachine = {
     } else if (role === "STUDENT") {
       switch (currentStatus) {
         case "Pending":
+        case "Under Review":
         case "Shortlisted":
           return newStatus === "Withdrawn";
         case "Accepted":

@@ -3,10 +3,8 @@
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { ProjectApplicantsPipeline } from "@/components/client";
-import {
-  clientProjectsRepository,
-  type ClientProjectItem,
-} from "@/lib/client-projects-repository";
+import { apiClient } from "@/lib/api-client";
+import { mapProject } from "@/lib/api-mappers";
 import type { Project as ClientProjectDetail } from "@/types";
 
 interface ClientProjectApplicantsClientProps {
@@ -18,23 +16,41 @@ export function ClientProjectApplicantsClient({
   id,
   initialProject,
 }: ClientProjectApplicantsClientProps) {
-  const [project, setProject] = useState<ClientProjectItem | null>(
-    () => initialProject || clientProjectsRepository.getProjectById(id)
+  const [project, setProject] = useState<ClientProjectDetail | null>(
+    initialProject
   );
+  const [isLoading, setIsLoading] = useState(!initialProject);
 
   useEffect(() => {
-    const handleUpdate = () => {
-      const p = clientProjectsRepository.getProjectById(id);
-      if (p) setProject(p);
-    };
-
-    window.addEventListener("skillbridge_data_updated", handleUpdate);
-    window.addEventListener("storage", handleUpdate);
+    let isMounted = true;
+    async function loadProject() {
+      try {
+        const data = await apiClient.get<any>(`/api/projects/${id}`);
+        if (isMounted && data) {
+          setProject(mapProject(data));
+        }
+      } catch (err) {
+        console.error("Failed to load project:", err);
+      } finally {
+        if (isMounted) setIsLoading(false);
+      }
+    }
+    loadProject();
     return () => {
-      window.removeEventListener("skillbridge_data_updated", handleUpdate);
-      window.removeEventListener("storage", handleUpdate);
+      isMounted = false;
     };
   }, [id]);
+
+  if (isLoading) {
+    return (
+      <div className="flex flex-col items-center justify-center py-20 text-center">
+        <div className="h-8 w-8 animate-spin rounded-full border-2 border-[var(--color-text-primary)] border-t-transparent" />
+        <span className="mt-3 text-[13px] font-medium text-[var(--color-text-secondary)]">
+          Loading project...
+        </span>
+      </div>
+    );
+  }
 
   if (!project) {
     return (

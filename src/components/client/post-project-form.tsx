@@ -4,7 +4,9 @@ import React, { useState } from "react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { useClientAuth } from "./client-auth-context";
-import { clientProjectsRepository, type ClientProjectItem } from "@/lib/client-projects-repository";
+import { apiClient } from "@/lib/api-client";
+import { mapProject } from "@/lib/api-mappers";
+import type { Project as ClientProjectItem } from "@/types";
 
 const CATEGORIES = [
   "Web Development",
@@ -180,7 +182,7 @@ export function PostProjectForm() {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!validate()) {
@@ -207,24 +209,30 @@ export function PostProjectForm() {
       advanced: "Advanced / Final Year",
     };
 
-    const newProj = clientProjectsRepository.createProject({
-      clientId: user?.id || "client-local",
-      title: form.title,
-      description: form.description,
-      category: form.category,
-      skills: form.skills,
-      budget: form.budget,
-      duration: form.duration,
-      experienceLevel: experienceLabelMap[form.experienceLevel] || form.experienceLevel,
-      deliverables: deliverablesList,
-      deadline: form.deadline || undefined,
-    });
+    try {
+      const created = await apiClient.post<any>("/api/projects", {
+        title: form.title,
+        description: form.description,
+        category: form.category,
+        skills: form.skills,
+        budget: form.budget,
+        duration: form.duration,
+        experienceLevel: experienceLabelMap[form.experienceLevel] || form.experienceLevel,
+        deliverables: deliverablesList,
+        deadline: form.deadline || undefined,
+      });
 
-    setTimeout(() => {
-      setIsSubmitting(false);
-      setCreatedProject(newProj);
+      const mapped = mapProject(created);
+      setCreatedProject(mapped);
       setSubmitSuccess(true);
-    }, 400);
+    } catch (err: any) {
+      setErrors((prev) => ({
+        ...prev,
+        title: err.message || "Failed to create project. Please ensure you are signed in.",
+      }));
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   if (submitSuccess && createdProject) {

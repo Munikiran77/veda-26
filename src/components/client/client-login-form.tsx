@@ -45,18 +45,23 @@ function LoginFormInner() {
     setIsSubmitting(true);
 
     try {
-      await login(cleanEmail);
+      await login(cleanEmail, undefined, undefined, password);
       router.push(from.startsWith("/client") ? from : "/client/dashboard");
-    } catch {
-      setError("Unable to complete sign in. Please try again.");
+    } catch (err: any) {
+      setError(err.message || "Unable to complete sign in. Please try again.");
       setIsSubmitting(false);
     }
   };
 
   const handleDemoSignIn = async () => {
     setIsSubmitting(true);
-    await login("client@skillbridge.co", "Rishi Mamidanna", "Veda Studios");
-    router.push(from.startsWith("/client") ? from : "/client/dashboard");
+    try {
+      await login("client@skillbridge.co", "Rishi Mamidanna", "Veda Studios", "Client123!");
+      router.push(from.startsWith("/client") ? from : "/client/dashboard");
+    } catch (err: any) {
+      setError(err.message || "Unable to complete demo sign in.");
+      setIsSubmitting(false);
+    }
   };
 
   return (

@@ -1,13 +1,11 @@
 "use client";
 
-import React, { useState, useMemo, useEffect } from "react";
+import React, { useState, useMemo, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
-import type { Project as ClientProjectDetail, ApplicationStatus } from "@/types";
-import {
-  clientApplicationsRepository,
-  type ProjectApplication,
-} from "@/lib/client-applications-repository";
+import type { Project as ClientProjectDetail, ApplicationStatus, Application } from "@/types";
+import { apiClient } from "@/lib/api-client";
+import { mapApplication } from "@/lib/api-mappers";
 
 export interface ProjectApplicantsPipelineProps {
   project: ClientProjectDetail;
@@ -18,51 +16,61 @@ type FilterTab = "All" | "Shortlisted" | "Accepted" | "Rejected";
 export function ProjectApplicantsPipeline({
   project,
 }: ProjectApplicantsPipelineProps) {
-  // Read applicants from the persistent repository
-  const [applicants, setApplicants] = useState<ProjectApplication[]>(() =>
-    clientApplicationsRepository.getApplicationsByProjectId(project.id)
-  );
+  const [applicants, setApplicants] = useState<Application[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [activeFilter, setActiveFilter] = useState<FilterTab>("All");
   const [selectedProfileId, setSelectedProfileId] = useState<string | null>(null);
   const [rejectConfirmId, setRejectConfirmId] = useState<string | null>(null);
   const [feedbackToast, setFeedbackToast] = useState<string | null>(null);
 
-  // Sync state when storage updates or external application added
-  useEffect(() => {
-    const handleUpdate = () => {
-      setApplicants(clientApplicationsRepository.getApplicationsByProjectId(project.id));
-    };
-
-    window.addEventListener("skillbridge_data_updated", handleUpdate);
-    window.addEventListener("storage", handleUpdate);
-    return () => {
-      window.removeEventListener("skillbridge_data_updated", handleUpdate);
-      window.removeEventListener("storage", handleUpdate);
-    };
+  const loadApplicants = useCallback(async () => {
+    try {
+      setIsLoading(true);
+      const data = await apiClient.get<any[]>(`/api/projects/${project.id}/applications`);
+      if (Array.isArray(data)) {
+        setApplicants(data.map(mapApplication));
+      }
+    } catch (err) {
+      console.error("Failed to load applicants:", err);
+    } finally {
+      setIsLoading(false);
+    }
   }, [project.id]);
 
-  // Status transition handlers using the applications repository
-  const handleUpdateStatus = (applicantId: string, newStatus: ApplicationStatus) => {
-    // New signature: updateApplicationStatus(applicationId, newStatus)
-    clientApplicationsRepository.updateApplicationStatus(applicantId, newStatus);
-    const updated = clientApplicationsRepository.getApplicationsByProjectId(project.id);
-    setApplicants(updated);
+  useEffect(() => {
+    loadApplicants();
+  }, [loadApplicants]);
 
-    const applicant = updated.find((a) => a.id === applicantId);
-    const applicantName = applicant ? (applicant.name || "Candidate") : "Candidate";
+  // Status transition handlers using the real backend API
+  const handleUpdateStatus = async (applicantId: string, newStatus: ApplicationStatus) => {
+    try {
+      await apiClient.patch(`/api/applications/${applicantId}`, {
+        status: newStatus,
+      });
 
-    if (newStatus === "Shortlisted") {
-      setFeedbackToast(`${applicantName} has been shortlisted.`);
-    } else if (newStatus === "Accepted") {
-      setFeedbackToast(`${applicantName} has been accepted!`);
-    } else if (newStatus === "Rejected") {
-      setFeedbackToast(`${applicantName} has been marked as rejected.`);
-    } else if (newStatus === "Pending") {
-      setFeedbackToast(`${applicantName} returned to review.`);
+      // Update state locally
+      setApplicants((prev) =>
+        prev.map((app) => (app.id === applicantId ? { ...app, status: newStatus } : app))
+      );
+
+      const applicant = applicants.find((a) => a.id === applicantId);
+      const applicantName = applicant?.name || "Candidate";
+
+      if (newStatus === "Shortlisted") {
+        setFeedbackToast(`${applicantName} has been shortlisted.`);
+      } else if (newStatus === "Accepted") {
+        setFeedbackToast(`${applicantName} has been accepted! Work contract initiated.`);
+      } else if (newStatus === "Rejected") {
+        setFeedbackToast(`${applicantName} has been marked as rejected.`);
+      } else if (newStatus === "Pending") {
+        setFeedbackToast(`${applicantName} returned to review.`);
+      }
+    } catch (err: any) {
+      alert(err.message || `Failed to update status to ${newStatus}`);
+    } finally {
+      setRejectConfirmId(null);
+      setTimeout(() => setFeedbackToast(null), 3500);
     }
-
-    setRejectConfirmId(null);
-    setTimeout(() => setFeedbackToast(null), 3500);
   };
 
   // Filtered applicants
@@ -211,7 +219,14 @@ export function ProjectApplicantsPipeline({
       </div>
 
       {/* Applicant Cards or Empty State */}
-      {filteredApplicants.length === 0 ? (
+      {isLoading ? (
+        <div className="flex flex-col items-center justify-center py-20 text-center">
+          <div className="h-8 w-8 animate-spin rounded-full border-2 border-[var(--color-text-primary)] border-t-transparent" />
+          <span className="mt-3 text-[13px] font-medium text-[var(--color-text-secondary)]">
+            Loading applicants...
+          </span>
+        </div>
+      ) : filteredApplicants.length === 0 ? (
         <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-[var(--color-border-subtle)] bg-[var(--color-canvas-bg)] p-8 sm:p-12 text-center">
           <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-[var(--color-canvas-surface)] text-[var(--color-text-tertiary)]">
             <svg

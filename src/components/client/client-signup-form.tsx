@@ -43,10 +43,10 @@ function SignupFormInner() {
     setIsSubmitting(true);
 
     try {
-      await signup(cleanName, cleanEmail, company.trim());
+      await signup(cleanName, cleanEmail, company.trim(), password);
       router.push(from.startsWith("/client") ? from : "/client/dashboard");
-    } catch {
-      setError("Failed to create client account. Please try again.");
+    } catch (err: any) {
+      setError(err.message || "Failed to create client account. Please try again.");
       setIsSubmitting(false);
     }
   };

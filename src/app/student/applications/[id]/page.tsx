@@ -1,14 +1,14 @@
 "use client";
 
 import { use, useState, useEffect } from "react";
-import { applicationStateMachine } from "@/lib/application-state-machine";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowLeft, ArrowRight, Trash2, SearchX } from "lucide-react";
+import { ArrowLeft, Trash2, SearchX } from "lucide-react";
 import Link from "next/link";
 import { StudentLayout } from "@/components/student/StudentLayout";
 import { ApplicationProgress } from "@/components/student/applications";
-import { sharedRepository } from "@/lib/shared-repository";
+import { apiClient } from "@/lib/api-client";
+import { mapApplication, mapProject } from "@/lib/api-mappers";
 import { cn } from "@/lib/utils";
 import type { Application, Project } from "@/types";
 
@@ -27,39 +27,69 @@ const statusStyles: Record<Application["status"], string> = {
 
 type AppWithProject = Application & { project: Project };
 
-function loadAppData(id: string): AppWithProject | null {
-  const apps = sharedRepository.getApplications();
-  const app = apps.find(a => a.id === id);
-  if (!app) return null;
-  const projects = sharedRepository.getProjects();
-  const project = projects.find(p => p.id === app.projectId);
-  if (!project) return null;
-  return { ...app, project };
-}
-
 export default function ApplicationDetailsPage({ params }: ApplicationDetailsPageProps) {
   const router = useRouter();
   const { id } = use(params);
 
-  const [appData, setAppData] = useState<AppWithProject | null>(() => loadAppData(id));
+  const [appData, setAppData] = useState<AppWithProject | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
   const [showWithdrawModal, setShowWithdrawModal] = useState(false);
   const [isWithdrawn, setIsWithdrawn] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  // Live-sync: re-read from shared repo when status changes (e.g. Client shortlists/accepts in another tab)
   useEffect(() => {
-    const refresh = () => {
-      const updated = loadAppData(id);
-      if (updated) setAppData(updated);
-    };
-    window.addEventListener("skillbridge_data_updated", refresh);
-    window.addEventListener("storage", refresh);
+    let isMounted = true;
+    async function loadData() {
+      try {
+        setIsLoading(true);
+        setError(null);
+        const data = await apiClient.get<any>(`/api/applications/${id}`);
+        if (isMounted && data) {
+          const app = mapApplication(data);
+          const project = mapProject(data.project);
+          setAppData({ ...app, project });
+        }
+      } catch (err: any) {
+        if (isMounted) {
+          setError(err.message || "Failed to load application.");
+        }
+      } finally {
+        if (isMounted) setIsLoading(false);
+      }
+    }
+    loadData();
     return () => {
-      window.removeEventListener("skillbridge_data_updated", refresh);
-      window.removeEventListener("storage", refresh);
+      isMounted = false;
     };
   }, [id]);
 
-  if (!appData) {
+  const handleWithdraw = async () => {
+    setShowWithdrawModal(false);
+    if (!appData || appData.status === "Accepted" || appData.status === "Rejected") return;
+
+    try {
+      await apiClient.patch(`/api/applications/${id}`, { status: "WITHDRAWN" });
+      setIsWithdrawn(true);
+      setAppData((prev) => (prev ? { ...prev, status: "Withdrawn" } : null));
+    } catch (err: any) {
+      alert(err.message || "Failed to withdraw application.");
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <StudentLayout title="Application Details">
+        <div className="flex h-[60vh] flex-col items-center justify-center text-center">
+          <div className="h-8 w-8 animate-spin rounded-full border-2 border-[var(--color-text-primary)] border-t-transparent" />
+          <p className="mt-4 text-sm text-[var(--color-text-secondary)]">
+            Loading application details...
+          </p>
+        </div>
+      </StudentLayout>
+    );
+  }
+
+  if (!appData || error) {
     return (
       <StudentLayout title="Application Details">
         <div className="flex h-[60vh] flex-col items-center justify-center text-center">
@@ -69,6 +99,9 @@ export default function ApplicationDetailsPage({ params }: ApplicationDetailsPag
           <h2 className="mb-2 text-xl font-bold text-[var(--color-text-primary)]">
             Application not found
           </h2>
+          <p className="mb-8 text-sm text-[var(--color-text-secondary)]">
+            {error || "Sorry, we couldn't find this application."}
+          </p>
           <button
             onClick={() => router.push("/student/applications")}
             className="flex items-center gap-2 rounded-xl bg-[var(--color-text-primary)] px-6 py-3 text-sm font-semibold text-white hover:bg-[var(--color-text-secondary)] transition-colors"
@@ -83,19 +116,7 @@ export default function ApplicationDetailsPage({ params }: ApplicationDetailsPag
 
   const { project, ...application } = appData;
 
-  const handleWithdraw = () => {
-    setShowWithdrawModal(false);
-    // Guard: don't allow withdraw if already accepted
-    if (application.status === "Accepted") return;
-    sharedRepository.saveApplication({
-      ...application,
-      status: "Withdrawn",
-      updatedAt: new Date().toISOString(),
-    });
-    setIsWithdrawn(true);
-  };
-
-  if (isWithdrawn) {
+  if (isWithdrawn || application.status === "Withdrawn") {
     return (
       <StudentLayout title="Application Details">
         <motion.div
@@ -123,7 +144,10 @@ export default function ApplicationDetailsPage({ params }: ApplicationDetailsPag
     );
   }
 
-  const canWithdraw = applicationStateMachine.isValidTransition(application.status, "Withdrawn", "STUDENT");
+  const canWithdraw =
+    application.status === "Pending" ||
+    application.status === "Under Review" ||
+    application.status === "Shortlisted";
 
   return (
     <StudentLayout title="Application Details">

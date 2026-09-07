@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { Plus } from "lucide-react";
@@ -11,27 +11,51 @@ import {
   ApplicationCard,
   ApplicationEmptyState,
 } from "@/components/student/applications";
-import { useSharedApplications, useSharedProjects } from "@/lib/shared-repository";
+import { apiClient } from "@/lib/api-client";
+import { mapApplication, mapProject } from "@/lib/api-mappers";
 import type { ApplicationTab } from "@/components/student/applications";
-import type { SortOption } from "@/types";
+import type { SortOption, Application, Project } from "@/types";
+
+type ApplicationWithProject = Application & { project: Project };
 
 export default function ApplicationsPage() {
   const [activeTab, setActiveTab] = useState<ApplicationTab>("All");
   const [searchQuery, setSearchQuery] = useState("");
-  const [sortOption, setSortOption] = useState<SortOption>("Newest"); // We'll just use the same SortOption type but default to Newest
+  const [sortOption, setSortOption] = useState<SortOption>("Newest");
+  const [allApps, setAllApps] = useState<ApplicationWithProject[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const sharedApps = useSharedApplications();
-  const sharedProjects = useSharedProjects();
-  
-  const allApps = useMemo(() => {
-    return sharedApps
-      .filter(a => a.studentId === "student-1")
-      .map(app => ({
-        ...app,
-        project: sharedProjects.find(p => p.id === app.projectId)!
-      }))
-      .filter(a => a.project !== undefined);
-  }, [sharedApps, sharedProjects]);
+  useEffect(() => {
+    let isMounted = true;
+    async function loadApplications() {
+      try {
+        setIsLoading(true);
+        setError(null);
+        const data = await apiClient.get<any[]>("/api/applications");
+        if (isMounted && Array.isArray(data)) {
+          const mapped = data.map((raw: any) => {
+            const app = mapApplication(raw);
+            const project = mapProject(raw.project);
+            return { ...app, project };
+          });
+          setAllApps(mapped);
+        }
+      } catch (err: any) {
+        if (isMounted) {
+          setError(err.message || "Failed to load applications.");
+        }
+      } finally {
+        if (isMounted) {
+          setIsLoading(false);
+        }
+      }
+    }
+    loadApplications();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   // Compute counts for summary and tabs
   const counts = useMemo(() => {
@@ -58,25 +82,24 @@ export default function ApplicationsPage() {
       const q = searchQuery.toLowerCase();
       result = result.filter(
         (a) =>
-          a.project.title.toLowerCase().includes(q) ||
-          a.project.client!.toLowerCase().includes(q) ||
-          a.project.skills.some((s) => s.toLowerCase().includes(q))
+          a.project?.title?.toLowerCase().includes(q) ||
+          (a.project?.client || "").toLowerCase().includes(q) ||
+          a.project?.skills?.some((s) => s.toLowerCase().includes(q))
       );
     }
 
     // Sort
     result.sort((a, b) => {
       switch (sortOption) {
-        case "Recommended": // repurpose as Highest Match
-          return b.project.matchPercentage! - a.project.matchPercentage!;
+        case "Recommended":
+          return (b.project?.matchPercentage || 0) - (a.project?.matchPercentage || 0);
         case "Budget: High to Low":
-          return b.project.budgetValue! - a.project.budgetValue!;
+          return (b.project?.budgetValue || 0) - (a.project?.budgetValue || 0);
         case "Budget: Low to High":
-          return a.project.budgetValue! - b.project.budgetValue!;
+          return (a.project?.budgetValue || 0) - (b.project?.budgetValue || 0);
         case "Newest":
         default:
-          // Mock sort: just string compare appliedAt for now or reverse id
-          return parseInt(b.id.split("_")[1] || "0") - parseInt(a.id.split("_")[1] || "0");
+          return new Date(b.appliedAt).getTime() - new Date(a.appliedAt).getTime();
       }
     });
 
@@ -97,7 +120,7 @@ export default function ApplicationsPage() {
               My Applications
             </h1>
             <p className="mt-1 text-sm text-[var(--color-text-secondary)]">
-              Track your applications and see where you stand.
+              Track your proposals and monitor real-time review progress.
             </p>
           </div>
           <Link
@@ -131,7 +154,24 @@ export default function ApplicationsPage() {
           </div>
         </div>
 
-        {filteredApps.length === 0 ? (
+        {isLoading ? (
+          <div className="flex flex-col items-center justify-center py-20 text-center">
+            <div className="h-8 w-8 animate-spin rounded-full border-2 border-[var(--color-text-primary)] border-t-transparent" />
+            <p className="mt-4 text-sm text-[var(--color-text-secondary)]">
+              Loading your applications...
+            </p>
+          </div>
+        ) : error ? (
+          <div className="rounded-2xl border border-red-200 bg-red-50/50 p-8 text-center">
+            <p className="text-sm font-semibold text-red-700">{error}</p>
+            <button
+              onClick={() => window.location.reload()}
+              className="mt-4 rounded-xl bg-red-600 px-4 py-2 text-xs font-semibold text-white hover:bg-red-700"
+            >
+              Retry
+            </button>
+          </div>
+        ) : filteredApps.length === 0 ? (
           <ApplicationEmptyState tab={activeTab} />
         ) : (
           <div className="flex flex-col gap-4 pb-12">

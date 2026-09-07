@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { StudentSidebar } from "@/components/student";
 import { StudentHeader } from "@/components/student";
+import { StudentAuthProvider } from "@/components/student/student-auth-context";
 
 interface StudentLayoutProps {
   children: React.ReactNode;
@@ -11,7 +12,12 @@ interface StudentLayoutProps {
   noPadding?: boolean;
 }
 
-export function StudentLayout({ children, title = "Dashboard", fullWidth = false, noPadding = false }: StudentLayoutProps) {
+function StudentLayoutInner({
+  children,
+  title = "Dashboard",
+  fullWidth = false,
+  noPadding = false,
+}: StudentLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   return (
@@ -23,14 +29,28 @@ export function StudentLayout({ children, title = "Dashboard", fullWidth = false
         <StudentHeader title={title} onMenuClick={() => setSidebarOpen(true)} />
 
         {/* Scrollable content */}
-        <main className={noPadding ? "flex flex-1 overflow-hidden" : `flex-1 overflow-y-auto p-4 md:p-6 lg:p-8`}>
-          {fullWidth ? children : (
-            <div className="mx-auto w-full">
-              {children}
-            </div>
+        <main
+          className={
+            noPadding
+              ? "flex flex-1 overflow-hidden"
+              : "flex-1 overflow-y-auto p-4 md:p-6 lg:p-8"
+          }
+        >
+          {fullWidth ? (
+            children
+          ) : (
+            <div className="mx-auto w-full">{children}</div>
           )}
         </main>
       </div>
     </div>
+  );
+}
+
+export function StudentLayout(props: StudentLayoutProps) {
+  return (
+    <StudentAuthProvider>
+      <StudentLayoutInner {...props} />
+    </StudentAuthProvider>
   );
 }

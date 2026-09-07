@@ -34,9 +34,11 @@ export function RecentApplicants({
             >
               Recent Applicants
             </h2>
-            <span className="inline-flex items-center rounded-full bg-[#0071e3]/10 px-2 py-0.5 text-[11px] font-medium text-[#0071e3]">
-              Sample preview
-            </span>
+            {applicants.length > 0 && (
+              <span className="inline-flex items-center rounded-full bg-blue-50 border border-blue-200/60 px-2 py-0.5 text-[11px] font-medium text-blue-700">
+                Active applicants
+              </span>
+            )}
           </div>
           <p className="text-[13px] text-[var(--color-text-secondary)]">
             Review candidate applications and portfolios for your posted projects.

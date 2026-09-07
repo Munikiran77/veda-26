@@ -1,65 +1,76 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
-import {
-  clientApplicationsRepository,
-  type ProjectApplication,
-} from "@/lib/client-applications-repository";
-import { clientProjectsRepository } from "@/lib/client-projects-repository";
-import { studentTalentRepository } from "@/lib/student-talent-repository";
+import { apiClient } from "@/lib/api-client";
+import { formatPrismaProjectStatus } from "@/lib/api-mappers";
 
 interface HiredStudentViewItem {
-  application: ProjectApplication;
+  id: string;
+  studentName: string;
+  avatarInitials: string;
+  headline: string;
+  college: string;
   projectTitle: string;
   projectStatus: string;
+  proposal?: string;
+  appliedAt?: string;
+  skills: string[];
   studentProfileId?: string;
 }
 
-function loadHiredStudents(): HiredStudentViewItem[] {
-  const acceptedApps = clientApplicationsRepository.getAcceptedApplications();
-  const allStudents = studentTalentRepository.getAllStudents();
-
-  return acceptedApps.map((app) => {
-    const project = clientProjectsRepository.getProjectById(app.projectId);
-    const projectTitle = project ? project.title : `Project #${app.projectId}`;
-    const projectStatus = project ? project.status : "In Progress";
-
-    // Match with known student talent profile by name or explicit studentId
-    const matchedProfile = allStudents.find(
-      (s) => s.id === app.studentId || s.name.toLowerCase() === (app.name || "").toLowerCase()
-    );
-
-    return {
-      application: app,
-      projectTitle,
-      projectStatus,
-      studentProfileId: matchedProfile ? matchedProfile.id : undefined,
-    };
-  });
-}
-
 export function HiredStudentsList() {
-  const [hiredList, setHiredList] = useState<HiredStudentViewItem[]>(() => loadHiredStudents());
-
-  const refreshHiredStudents = useCallback(() => {
-    setHiredList(loadHiredStudents());
-  }, []);
+  const [hiredList, setHiredList] = useState<HiredStudentViewItem[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const handleUpdate = () => {
-      refreshHiredStudents();
-    };
+    let isMounted = true;
+    async function loadHired() {
+      try {
+        setIsLoading(true);
+        const data = await apiClient.get<any[]>("/api/work");
+        if (isMounted && Array.isArray(data)) {
+          const items: HiredStudentViewItem[] = data.map((contract) => {
+            const studentUser = contract.student?.user;
+            const studentName = studentUser?.name || "Student";
+            const avatarInitials = (studentUser?.name || "ST")
+              .split(" ")
+              .map((n: string) => n[0])
+              .join("")
+              .slice(0, 2)
+              .toUpperCase();
 
-    // Use the unified event name from sharedRepository
-    window.addEventListener("skillbridge_data_updated", handleUpdate);
-    window.addEventListener("storage", handleUpdate);
+            const skills = Array.isArray(contract.student?.skills)
+              ? contract.student.skills.map((s: any) => s.skill?.name || s.name || s)
+              : [];
 
+            return {
+              id: contract.id,
+              studentName,
+              avatarInitials,
+              headline: contract.student?.headline || "Student Builder",
+              college: contract.student?.college || "University",
+              projectTitle: contract.project?.title || `Project #${contract.projectId}`,
+              projectStatus: formatPrismaProjectStatus(contract.project?.status),
+              proposal: contract.application?.proposal,
+              appliedAt: contract.application?.appliedAt,
+              skills,
+              studentProfileId: contract.student?.id,
+            };
+          });
+          setHiredList(items);
+        }
+      } catch (err) {
+        console.error("Failed to load hired students:", err);
+      } finally {
+        if (isMounted) setIsLoading(false);
+      }
+    }
+    loadHired();
     return () => {
-      window.removeEventListener("skillbridge_data_updated", handleUpdate);
-      window.removeEventListener("storage", handleUpdate);
+      isMounted = false;
     };
-  }, [refreshHiredStudents]);
+  }, []);
 
   const totalHired = hiredList.length;
 
@@ -93,15 +104,22 @@ export function HiredStudentsList() {
           </p>
         </div>
         <Link
-          href="/client/talent"
+          href="/client/projects"
           className="inline-flex items-center gap-2 rounded-xl bg-[var(--color-text-primary)] px-4 py-2.5 text-sm font-semibold text-white hover:bg-black transition-colors"
         >
-          Find More Talent
+          View Projects
         </Link>
       </div>
 
       {/* Content */}
-      {totalHired === 0 ? (
+      {isLoading ? (
+        <div className="flex flex-col items-center justify-center py-20 text-center">
+          <div className="h-8 w-8 animate-spin rounded-full border-2 border-[var(--color-text-primary)] border-t-transparent" />
+          <span className="mt-3 text-[13px] font-medium text-[var(--color-text-secondary)]">
+            Loading hired talent...
+          </span>
+        </div>
+      ) : totalHired === 0 ? (
         <div className="flex flex-col items-center justify-center py-20 text-center">
           <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-[var(--color-canvas-surface)] border border-[var(--color-border-subtle)]">
             <svg className="h-8 w-8 text-[var(--color-text-secondary)]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -112,7 +130,7 @@ export function HiredStudentsList() {
             No hired students yet
           </h3>
           <p className="text-sm text-[var(--color-text-secondary)] max-w-sm mb-6">
-            Accept applicants from your projects to see them here.
+            Accept applicants from your projects to initiate active work contracts and see them here.
           </p>
           <div className="flex gap-3">
             <Link
@@ -121,60 +139,46 @@ export function HiredStudentsList() {
             >
               View Projects
             </Link>
-            <Link
-              href="/client/talent"
-              className="rounded-xl bg-[var(--color-text-primary)] px-4 py-2.5 text-sm font-semibold text-white hover:bg-black transition-colors"
-            >
-              Find Talent
-            </Link>
           </div>
         </div>
       ) : (
         <div className="space-y-4">
-          {hiredList.map(({ application: app, projectTitle, projectStatus, studentProfileId }) => (
+          {hiredList.map((item) => (
             <div
-              key={app.id}
+              key={item.id}
               className="rounded-2xl border border-[var(--color-border-subtle)] bg-white p-6 shadow-sm hover:shadow-md transition-shadow"
             >
               <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                 {/* Student Info */}
                 <div className="flex items-start gap-4">
                   <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-[var(--color-accent)]/10 text-sm font-bold text-[var(--color-accent)]">
-                    {app.avatarInitials || (app.name || "?").slice(0, 2).toUpperCase()}
+                    {item.avatarInitials}
                   </div>
                   <div>
                     <div className="flex items-center gap-2 flex-wrap">
                       <h3 className="font-semibold text-[var(--color-text-primary)]">
-                        {app.name || "Student"}
+                        {item.studentName}
                       </h3>
                       <span className="inline-flex items-center rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-medium text-emerald-700 border border-emerald-100">
-                        Accepted
+                        Contract Active
                       </span>
                     </div>
                     <p className="text-sm text-[var(--color-text-secondary)] mt-0.5">
-                      {app.headline || "Student Developer"}
+                      {item.headline}
                     </p>
                     <p className="text-xs text-[var(--color-text-secondary)] mt-0.5">
-                      {app.college || ""}
+                      {item.college}
                     </p>
                   </div>
                 </div>
 
                 {/* Actions */}
                 <div className="flex items-center gap-2 shrink-0">
-                  {studentProfileId && (
-                    <Link
-                      href={`/client/talent/${studentProfileId}`}
-                      className="rounded-lg border border-[var(--color-border-subtle)] px-3 py-1.5 text-xs font-medium text-[var(--color-text-primary)] hover:bg-[var(--color-canvas-surface)] transition-colors"
-                    >
-                      View Profile
-                    </Link>
-                  )}
                   <Link
                     href="/client/projects"
                     className="rounded-lg bg-[var(--color-text-primary)] px-3 py-1.5 text-xs font-semibold text-white hover:bg-black transition-colors"
                   >
-                    View Project
+                    View Projects
                   </Link>
                 </div>
               </div>
@@ -184,16 +188,15 @@ export function HiredStudentsList() {
                 <div>
                   <p className="text-xs text-[var(--color-text-secondary)] font-medium">Working on</p>
                   <p className="text-sm font-semibold text-[var(--color-text-primary)] mt-0.5">
-                    {projectTitle}
+                    {item.projectTitle}
                   </p>
                   <p className="text-xs text-[var(--color-text-secondary)] mt-0.5">
-                    Project status:{" "}
-                    <span className="font-medium text-[var(--color-text-primary)]">{projectStatus}</span>
+                    Status: <span className="font-medium text-[var(--color-text-primary)]">{item.projectStatus}</span>
                   </p>
                 </div>
 
                 <div className="flex flex-wrap gap-1.5">
-                  {(app.relevantSkills || []).slice(0, 4).map((skill: string) => (
+                  {(item.skills || []).slice(0, 4).map((skill: string) => (
                     <span
                       key={skill}
                       className="rounded-lg bg-[var(--color-canvas-surface)] border border-[var(--color-border-subtle)] px-2 py-0.5 text-xs font-medium text-[var(--color-text-primary)]"
@@ -205,19 +208,19 @@ export function HiredStudentsList() {
               </div>
 
               {/* Proposal summary */}
-              {app.proposal && (
+              {item.proposal && (
                 <div className="mt-3">
                   <p className="text-xs text-[var(--color-text-secondary)] line-clamp-2">
-                    &ldquo;{app.proposal}&rdquo;
+                    &ldquo;{item.proposal}&rdquo;
                   </p>
                 </div>
               )}
 
               {/* Meta */}
               <p className="mt-2 text-xs text-[var(--color-text-secondary)]">
-                Applied:{" "}
+                Contract started:{" "}
                 <span className="font-medium text-[var(--color-text-primary)]">
-                  {app.appliedAt ? new Date(app.appliedAt).toLocaleDateString() : "—"}
+                  {item.appliedAt ? new Date(item.appliedAt).toLocaleDateString() : "Active"}
                 </span>
               </p>
             </div>

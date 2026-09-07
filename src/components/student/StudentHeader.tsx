@@ -2,6 +2,7 @@
 
 import { Bell, Search, Menu } from "lucide-react";
 import { studentProfile } from "@/data/student";
+import { useStudentAuth } from "@/components/student/student-auth-context";
 
 interface StudentHeaderProps {
   title: string;
@@ -9,6 +10,8 @@ interface StudentHeaderProps {
 }
 
 export function StudentHeader({ title, onMenuClick }: StudentHeaderProps) {
+  const { user } = useStudentAuth();
+
   return (
     <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-[var(--color-border-subtle)] bg-white/80 px-4 md:px-6 backdrop-blur-md">
       {/* Left: Hamburger (mobile) + Title */}
@@ -49,7 +52,7 @@ export function StudentHeader({ title, onMenuClick }: StudentHeaderProps) {
         </button>
 
         <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-violet-500 text-sm font-semibold text-white ml-1">
-          {studentProfile.avatar}
+          {user?.avatar || studentProfile.avatar}
         </div>
       </div>
     </header>
