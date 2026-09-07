@@ -1,4 +1,3 @@
-// @ts-nocheck
 "use client";
 
 import React, { useState, useEffect } from "react";
@@ -29,10 +28,10 @@ export function ClientProjectApplicantsClient({
       if (p) setProject(p);
     };
 
-    window.addEventListener("skillbridge_projects_updated", handleUpdate);
+    window.addEventListener("skillbridge_data_updated", handleUpdate);
     window.addEventListener("storage", handleUpdate);
     return () => {
-      window.removeEventListener("skillbridge_projects_updated", handleUpdate);
+      window.removeEventListener("skillbridge_data_updated", handleUpdate);
       window.removeEventListener("storage", handleUpdate);
     };
   }, [id]);

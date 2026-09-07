@@ -152,6 +152,7 @@ export interface Application {
   portfolioSummary?: string;
   portfolioUrl?: string;
   demoMatchScore?: string;
+  isUserCreated?: boolean;
 }
 
 // ─── Work / Contract Types ───────────────────────────────────────────────────

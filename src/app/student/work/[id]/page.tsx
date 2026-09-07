@@ -95,6 +95,8 @@ export default function WorkspacePage({ params }: WorkspacePageProps) {
   const { project, ...work } = workData;
 
   const handleSubmitSuccess = () => {
+    const updatedWork = { ...workData, status: "Awaiting Review" as WorkStatus, progress: 100 };
+    sharedRepository.saveWorkProject(updatedWork);
     setIsSubmitModalOpen(false);
     setCurrentStatus("Awaiting Review");
     setProgress(100);

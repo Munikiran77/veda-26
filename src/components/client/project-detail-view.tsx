@@ -3,10 +3,11 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
-import { ClientProjectDetail, ProjectStatus } from "@/data/client-projects";
+import { ClientProjectDetail } from "@/data/client-projects";
+import { Project, ProjectStatus } from "@/types";
 
 export interface ProjectDetailViewProps {
-  project: ClientProjectDetail;
+  project: Project | ClientProjectDetail;
 }
 
 export function ProjectDetailView({ project }: ProjectDetailViewProps) {
@@ -37,6 +38,12 @@ export function ProjectDetailView({ project }: ProjectDetailViewProps) {
           badge: "bg-amber-50 text-amber-700 border-amber-200/60",
           indicator: "bg-amber-500",
           text: "Draft — Not Published",
+        };
+      case "Closed":
+        return {
+          badge: "bg-gray-100 text-gray-700 border-gray-200/60",
+          indicator: "bg-gray-400",
+          text: "Closed",
         };
       default:
         return {
@@ -103,7 +110,7 @@ export function ProjectDetailView({ project }: ProjectDetailViewProps) {
           </div>
 
           <div className="text-[12px] text-[var(--color-text-tertiary)]">
-            Posted on {project.postedDate}
+            Posted on {"postedDate" in project && project.postedDate ? project.postedDate : ("postedAt" in project && project.postedAt ? new Date(project.postedAt).toLocaleDateString() : "")}
           </div>
         </div>
 
@@ -183,7 +190,7 @@ export function ProjectDetailView({ project }: ProjectDetailViewProps) {
               Key Deliverables
             </h2>
             <ul className="space-y-2.5">
-              {project.deliverables.map((item, idx) => (
+              {(project.deliverables || []).map((item, idx) => (
                 <li key={idx} className="flex items-start gap-3 text-[13px] sm:text-[14px] text-[var(--color-text-secondary)]">
                   <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[#0071e3]/10 text-[#0071e3] text-[11px] font-semibold mt-0.5">
                     {idx + 1}

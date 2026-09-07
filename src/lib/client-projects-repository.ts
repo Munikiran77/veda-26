@@ -2,7 +2,7 @@ import { Project, ProjectStatus } from "@/types";
 import { sharedRepository } from "./shared-repository";
 
 export interface CreateProjectInput {
-  clientId: string;
+  clientId?: string;
   title: string;
   description: string;
   category: string;
@@ -18,13 +18,13 @@ export type ClientProjectItem = Project;
 
 export const clientProjectsRepository = {
   getUserProjects(): ClientProjectItem[] {
-    return sharedRepository.getProjects().filter(p => p.isUserCreated);
+    return sharedRepository.getProjects().filter(p => p.clientId === "client-1");
   },
 
   getAllProjects(clientId?: string): ClientProjectItem[] {
     const all = sharedRepository.getProjects();
     if (clientId) {
-      return all.filter(p => p.clientId === clientId || !p.isUserCreated);
+      return all.filter(p => p.clientId === clientId);
     }
     return all;
   },
@@ -33,10 +33,10 @@ export const clientProjectsRepository = {
     return sharedRepository.getProjects().find(p => p.id === id) || null;
   },
 
-  createProject(input: CreateProjectInput, userId: string = "client_123"): ClientProjectItem {
+  createProject(input: CreateProjectInput): ClientProjectItem {
     const newProject: Project = {
       id: `proj-${Date.now()}`,
-      clientId: userId,
+      clientId: "client-1",
       title: input.title,
       description: input.description,
       category: input.category,
@@ -58,7 +58,7 @@ export const clientProjectsRepository = {
 
   updateProjectStatus(projectId: string, status: ProjectStatus): ClientProjectItem | null {
     const all = sharedRepository.getProjects();
-    const proj = all.find(p => p.id === projectId);
+    const proj = all.find(p => p.id === projectId && p.clientId === "client-1");
     if (proj) {
       proj.status = status as any;
       sharedRepository.saveProject(proj);

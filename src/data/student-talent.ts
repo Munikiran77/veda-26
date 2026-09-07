@@ -22,8 +22,8 @@ export interface StudentProfile {
 export const DEMO_STUDENT_TALENT: StudentProfile[] = [
   {
     id: "student-1",
-    name: "Aarav Sharma",
-    avatarInitials: "AS",
+    name: "Alex Johnson",
+    avatarInitials: "AJ",
     headline: "Full-Stack Web & Next.js Engineer",
     college: "IIT Bombay &bull; B.Tech Computer Science (3rd Year)",
     expertise: "Web Development",

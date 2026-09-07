@@ -72,7 +72,7 @@ export function ClientAuthProvider({ children }: { children: React.ReactNode }) 
       .toUpperCase() || "CP";
 
     const clientUser: ClientUser = {
-      id: `client_${Date.now()}`,
+      id: "client-1",
       name: displayName,
       email: cleanEmail,
       company: company?.trim() || "SkillBridge Partner",

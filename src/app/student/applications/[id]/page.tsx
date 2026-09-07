@@ -1,6 +1,7 @@
 "use client";
 
 import { use, useState, useEffect } from "react";
+import { applicationStateMachine } from "@/lib/application-state-machine";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { ArrowLeft, ArrowRight, Trash2, SearchX } from "lucide-react";
@@ -122,7 +123,7 @@ export default function ApplicationDetailsPage({ params }: ApplicationDetailsPag
     );
   }
 
-  const canWithdraw = application.status !== "Accepted" && application.status !== "Withdrawn" && application.status !== "Rejected";
+  const canWithdraw = applicationStateMachine.isValidTransition(application.status, "Withdrawn", "STUDENT");
 
   return (
     <StudentLayout title="Application Details">

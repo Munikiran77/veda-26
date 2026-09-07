@@ -101,7 +101,7 @@ export default function FindProjectsPage() {
     });
 
     return result;
-  }, [searchQuery, filters, sortOption]);
+  }, [searchQuery, filters, sortOption, allProjects]);
 
   const topMatches = useMemo(() => {
     // Top matches are just the highest match percentage projects (if not filtering)
@@ -109,7 +109,7 @@ export default function FindProjectsPage() {
       return [];
     }
     return [...allProjects].sort((a, b) => b.matchPercentage! - a.matchPercentage!).slice(0, 3);
-  }, [searchQuery, filters]);
+  }, [searchQuery, filters, allProjects]);
 
   return (
     <StudentLayout title="Find Projects">

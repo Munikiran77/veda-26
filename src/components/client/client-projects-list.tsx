@@ -1,4 +1,3 @@
-// @ts-nocheck
 "use client";
 
 import React, { useState, useMemo, useEffect } from "react";
@@ -31,11 +30,11 @@ export function ClientProjectsList() {
       setProjects(clientProjectsRepository.getAllProjects(user?.id));
     };
 
-    window.addEventListener("skillbridge_projects_updated", handleProjectsUpdated);
+    window.addEventListener("skillbridge_data_updated", handleProjectsUpdated);
     window.addEventListener("storage", handleProjectsUpdated);
 
     return () => {
-      window.removeEventListener("skillbridge_projects_updated", handleProjectsUpdated);
+      window.removeEventListener("skillbridge_data_updated", handleProjectsUpdated);
       window.removeEventListener("storage", handleProjectsUpdated);
     };
   }, [user?.id]);

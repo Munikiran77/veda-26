@@ -1,4 +1,3 @@
-// @ts-nocheck
 "use client";
 
 import React, { useState, useMemo, useEffect } from "react";
@@ -277,7 +276,7 @@ export function ProjectApplicantsPipeline({
                     </p>
                     <p
                       className="text-[12px] text-[var(--color-text-tertiary)] mt-0.5"
-                      dangerouslySetInnerHTML={{ __html: applicant.college }}
+                      dangerouslySetInnerHTML={{ __html: applicant.college || "" }}
                     />
                   </div>
                 </div>
@@ -298,7 +297,7 @@ export function ProjectApplicantsPipeline({
                   Relevant Skills
                 </span>
                 <div className="flex flex-wrap gap-1.5">
-                  {applicant.relevantSkills.map((skill) => (
+                  {(applicant.relevantSkills || []).map((skill) => (
                     <span
                       key={skill}
                       className="inline-flex items-center rounded-lg border border-[var(--color-border-subtle)] bg-[var(--color-canvas-surface)] px-2.5 py-1 text-[11px] font-medium text-[var(--color-text-secondary)]"
@@ -375,15 +374,8 @@ export function ProjectApplicantsPipeline({
                     <div className="flex items-center gap-2">
                       <span className="inline-flex h-9 items-center gap-1.5 rounded-full border border-emerald-300 bg-emerald-50 px-4 text-[12px] sm:text-[13px] font-semibold text-emerald-800 shadow-2xs">
                         <span>Accepted candidate</span>
-                        <span>Γ£ô</span>
+                        <span>✓</span>
                       </span>
-                      <button
-                        type="button"
-                        onClick={() => handleUpdateStatus(applicant.id, "Pending")}
-                        className="text-[12px] text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] hover:underline px-2 py-1 focus-visible:outline-hidden"
-                      >
-                        Change
-                      </button>
                     </div>
                   )}
 
@@ -393,13 +385,6 @@ export function ProjectApplicantsPipeline({
                       <span className="inline-flex h-9 items-center rounded-full border border-red-200 bg-red-50 px-4 text-[12px] sm:text-[13px] font-medium text-red-700 shadow-2xs">
                         Application Rejected
                       </span>
-                      <button
-                        type="button"
-                        onClick={() => handleUpdateStatus(applicant.id, "Pending")}
-                        className="text-[12px] text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] hover:underline px-2 py-1 focus-visible:outline-hidden"
-                      >
-                        Reopen
-                      </button>
                     </div>
                   )}
 
