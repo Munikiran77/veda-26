@@ -7,6 +7,7 @@ interface ConversationItemProps {
   conversation: Conversation;
   isActive: boolean;
   onClick: () => void;
+  viewerRole?: "student" | "client";
 }
 
 const statusColors: Record<Conversation["clientStatus"], string> = {
@@ -15,8 +16,13 @@ const statusColors: Record<Conversation["clientStatus"], string> = {
   away: "bg-yellow-400",
 };
 
-export function ConversationItem({ conversation, isActive, onClick }: ConversationItemProps) {
+export function ConversationItem({ conversation, isActive, onClick, viewerRole = "student" }: ConversationItemProps) {
   const isUnread = conversation.unreadCount > 0;
+  const isClientViewer = viewerRole === "client";
+  const displayName = isClientViewer ? (conversation.studentName || "Student Candidate") : conversation.client;
+  const displayInitial = isClientViewer
+    ? (conversation.studentName?.charAt(0).toUpperCase() || "S")
+    : conversation.clientInitial;
 
   return (
     <button
@@ -31,7 +37,7 @@ export function ConversationItem({ conversation, isActive, onClick }: Conversati
       {/* Avatar */}
       <div className="relative flex-shrink-0">
         <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 text-sm font-bold text-white">
-          {conversation.clientInitial}
+          {displayInitial}
         </div>
         <span className={cn("absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-white", statusColors[conversation.clientStatus])} />
       </div>
@@ -40,7 +46,7 @@ export function ConversationItem({ conversation, isActive, onClick }: Conversati
       <div className="flex-1 min-w-0">
         <div className="flex items-center justify-between gap-2 mb-0.5">
           <span className={cn("truncate text-sm", isUnread ? "font-bold text-[var(--color-text-primary)]" : "font-semibold text-[var(--color-text-primary)]")}>
-            {conversation.client}
+            {displayName}
           </span>
           <span className="flex-shrink-0 text-[11px] text-[var(--color-text-secondary)]">
             {conversation.lastMessageAt}

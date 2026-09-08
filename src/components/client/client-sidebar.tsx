@@ -136,7 +136,7 @@ export const CLIENT_SIDEBAR_ITEMS: NavItemConfig[] = [
   },
   {
     label: "Messages",
-    href: "/client/dashboard#messages",
+    href: "/client/messages",
     icon: ({ className, "aria-hidden": ariaHidden }) => (
       <svg
         className={className}
@@ -346,6 +346,10 @@ export function ClientSidebar({ isOpen, onClose, className }: ClientSidebarProps
                 Boolean(pathname?.startsWith("/client/talent/"));
             } else if (item.label === "Hired Students") {
               isActive = pathname === "/client/hired-students";
+            } else if (item.label === "Messages") {
+              isActive =
+                pathname === "/client/messages" ||
+                Boolean(pathname?.startsWith("/client/messages/"));
             } else {
               isActive = pathname === item.href;
             }

@@ -12,9 +12,11 @@ interface ProjectContextProps {
   conversation: Conversation;
   isOpen: boolean;
   onClose: () => void;
+  viewerRole?: "student" | "client";
 }
 
-export function ProjectContext({ conversation, isOpen, onClose }: ProjectContextProps) {
+export function ProjectContext({ conversation, isOpen, onClose, viewerRole = "student" }: ProjectContextProps) {
+  const isClientViewer = viewerRole === "client";
   const fallbackProject = allProjects.find((p) => p.id === conversation.projectId);
   const fallbackWork = allWorkProjects.find((w) => w.projectId === conversation.projectId);
 
@@ -54,7 +56,15 @@ export function ProjectContext({ conversation, isOpen, onClose }: ProjectContext
             {title}
           </h4>
           <p className="mt-1 text-xs text-[var(--color-text-secondary)]">
-            Client: <span className="font-semibold text-[var(--color-text-primary)]">{clientName}</span>
+            {isClientViewer ? (
+              <>
+                Student: <span className="font-semibold text-[var(--color-text-primary)]">{conversation.studentName || "Candidate"}</span>
+              </>
+            ) : (
+              <>
+                Client: <span className="font-semibold text-[var(--color-text-primary)]">{clientName}</span>
+              </>
+            )}
           </p>
         </div>
 
@@ -114,23 +124,35 @@ export function ProjectContext({ conversation, isOpen, onClose }: ProjectContext
         )}
 
         {/* CTA */}
-        {work && (
+        {isClientViewer ? (
           <Link
-            href={`/student/work/${work.id}`}
+            href={`/client/projects/${conversation.projectId}`}
             className="group flex items-center justify-center gap-1.5 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-blue-700 transition-colors"
           >
-            View Project Workspace
+            View Project Spec
             <ArrowRight size={14} className="transition-transform group-hover:translate-x-0.5" />
           </Link>
-        )}
-        {!work && (
-          <Link
-            href={`/student/projects/${conversation.projectId}`}
-            className="group flex items-center justify-center gap-1.5 rounded-xl border border-[var(--color-border-subtle)] bg-white px-4 py-2.5 text-sm font-semibold text-[var(--color-text-primary)] hover:bg-[var(--color-canvas-surface)] transition-colors"
-          >
-            View Project
-            <ArrowRight size={14} className="transition-transform group-hover:translate-x-0.5" />
-          </Link>
+        ) : (
+          <>
+            {work && (
+              <Link
+                href={`/student/work/${work.id}`}
+                className="group flex items-center justify-center gap-1.5 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-blue-700 transition-colors"
+              >
+                View Project Workspace
+                <ArrowRight size={14} className="transition-transform group-hover:translate-x-0.5" />
+              </Link>
+            )}
+            {!work && (
+              <Link
+                href={`/student/projects/${conversation.projectId}`}
+                className="group flex items-center justify-center gap-1.5 rounded-xl border border-[var(--color-border-subtle)] bg-white px-4 py-2.5 text-sm font-semibold text-[var(--color-text-primary)] hover:bg-[var(--color-canvas-surface)] transition-colors"
+              >
+                View Project
+                <ArrowRight size={14} className="transition-transform group-hover:translate-x-0.5" />
+              </Link>
+            )}
+          </>
         )}
       </div>
     </div>
