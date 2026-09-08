@@ -1,16 +1,27 @@
 "use client";
 
-import React, { useState, Suspense } from "react";
+import React, { useState, useEffect, useContext, Suspense } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useStudentAuth, StudentAuthProvider } from "@/components/student/student-auth-context";
+import {
+  useStudentAuth,
+  StudentAuthProvider,
+  StudentAuthContext,
+} from "@/components/student/student-auth-context";
 
 function StudentLoginFormInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { user, login } = useStudentAuth();
+  const { user, isLoading, login } = useStudentAuth();
 
   const from = searchParams.get("from") || "/student";
+
+  // If already authenticated as a student, automatically proceed to target destination
+  useEffect(() => {
+    if (!isLoading && user && user.role === "student") {
+      router.replace(from.startsWith("/student") ? from : "/student");
+    }
+  }, [user, isLoading, from, router]);
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -219,17 +230,21 @@ function StudentLoginFormInner() {
 }
 
 export function StudentLoginForm() {
-  return (
-    <StudentAuthProvider>
-      <Suspense
-        fallback={
-          <div className="flex justify-center p-8">
-            <div className="h-6 w-6 animate-spin rounded-full border-2 border-[var(--color-text-primary)] border-t-transparent" />
-          </div>
-        }
-      >
-        <StudentLoginFormInner />
-      </Suspense>
-    </StudentAuthProvider>
+  const existingContext = useContext(StudentAuthContext);
+  const content = (
+    <Suspense
+      fallback={
+        <div className="flex justify-center p-8">
+          <div className="h-6 w-6 animate-spin rounded-full border-2 border-[var(--color-text-primary)] border-t-transparent" />
+        </div>
+      }
+    >
+      <StudentLoginFormInner />
+    </Suspense>
   );
+
+  if (existingContext) {
+    return content;
+  }
+  return <StudentAuthProvider>{content}</StudentAuthProvider>;
 }

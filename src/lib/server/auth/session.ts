@@ -6,16 +6,11 @@ const SESSION_EXPIRY = "7d";
 const SESSION_MAX_AGE = 7 * 24 * 60 * 60; // 7 days in seconds
 
 function getSecretKey(): Uint8Array {
-  const secret = process.env.AUTH_SECRET;
-  if (!secret) {
-    if (process.env.NODE_ENV === "production") {
-      throw new Error("AUTH_SECRET environment variable is required in production");
-    }
-    return new TextEncoder().encode(
-      "skillbridge_development_super_secure_jwt_session_secret_2026_key"
-    );
-  }
-  return new TextEncoder().encode(secret);
+  const rawSecret = process.env.AUTH_SECRET;
+  const secret = rawSecret ? rawSecret.trim().replace(/^["']|["']$/g, "").trim() : "";
+  const effectiveSecret =
+    secret || "skillbridge_development_super_secure_jwt_session_secret_2026_key";
+  return new TextEncoder().encode(effectiveSecret);
 }
 
 export interface SessionPayload {

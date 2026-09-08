@@ -75,8 +75,8 @@ export function Navbar({ className }: NavbarProps) {
     };
   }, [isMobileMenuOpen]);
 
-  // Return null if on client dashboard routes so it uses its own dedicated shell
-  if (pathname?.startsWith("/client")) {
+  // Return null if on client or student dashboard routes so they use their own dedicated shells
+  if (pathname?.startsWith("/client") || pathname?.startsWith("/student")) {
     return null;
   }
 

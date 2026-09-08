@@ -42,7 +42,7 @@ interface StudentAuthContextType {
   refreshSession: () => Promise<void>;
 }
 
-const StudentAuthContext = createContext<StudentAuthContextType | undefined>(
+export const StudentAuthContext = createContext<StudentAuthContextType | undefined>(
   undefined
 );
 

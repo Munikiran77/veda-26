@@ -1,10 +1,14 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useContext } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { StudentSidebar } from "@/components/student";
 import { StudentHeader } from "@/components/student";
-import { StudentAuthProvider, useStudentAuth } from "@/components/student/student-auth-context";
+import {
+  StudentAuthProvider,
+  StudentAuthContext,
+  useStudentAuth,
+} from "@/components/student/student-auth-context";
 
 interface StudentLayoutProps {
   children: React.ReactNode;
@@ -75,6 +79,10 @@ function StudentLayoutInner({
 }
 
 export function StudentLayout(props: StudentLayoutProps) {
+  const existingContext = useContext(StudentAuthContext);
+  if (existingContext) {
+    return <StudentLayoutInner {...props} />;
+  }
   return (
     <StudentAuthProvider>
       <StudentLayoutInner {...props} />
