@@ -137,7 +137,7 @@ export function GetStartedModal({ isOpen, onClose }: GetStartedModalProps) {
 
               {/* Option 2: Client */}
               <Link
-                href="/client/signup"
+                href="/client/login"
                 onClick={onClose}
                 className="group relative flex flex-col justify-between rounded-2xl border border-[#14141e]/[0.08] bg-[#fbfbfd] p-5 sm:p-6 transition-all duration-200 hover:border-purple-500/40 hover:bg-white hover:shadow-[0_8px_24px_rgba(147,51,234,0.08)] focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-purple-500"
               >
