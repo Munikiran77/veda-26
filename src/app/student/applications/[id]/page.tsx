@@ -9,7 +9,7 @@ import { StudentLayout } from "@/components/student/StudentLayout";
 import { ApplicationProgress } from "@/components/student/applications";
 import { apiClient } from "@/lib/api-client";
 import { mapApplication, mapProject } from "@/lib/api-mappers";
-import { cn } from "@/lib/utils";
+import { cn, formatINR } from "@/lib/utils";
 import type { Application, Project } from "@/types";
 
 interface ApplicationDetailsPageProps {
@@ -224,7 +224,7 @@ export default function ApplicationDetailsPage({ params }: ApplicationDetailsPag
             <div>
               <p className="text-xs font-medium text-[var(--color-text-secondary)]">Proposed Budget</p>
               <p className="mt-0.5 text-sm font-bold text-[var(--color-text-primary)]">
-                {application.proposedBudget || project.budget}
+                {formatINR(application.proposedBudget || project.budget)}
               </p>
             </div>
             <div>

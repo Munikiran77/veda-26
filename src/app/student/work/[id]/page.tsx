@@ -17,7 +17,7 @@ import {
 } from "@/components/student/work";
 import { apiClient } from "@/lib/api-client";
 import { mapWorkContract } from "@/lib/api-mappers";
-import { cn } from "@/lib/utils";
+import { cn, formatINR } from "@/lib/utils";
 import type { WorkStatus, WorkProject, Project } from "@/types";
 
 interface WorkspacePageProps {
@@ -169,7 +169,7 @@ export default function WorkspacePage({ params }: WorkspacePageProps) {
                   {project.client}
                 </p>
                 <div className="mt-4 flex flex-wrap items-center gap-4 text-sm text-[var(--color-text-secondary)]">
-                  <span className="font-semibold text-[var(--color-text-primary)]">{project.budget}</span>
+                  <span className="font-semibold text-[var(--color-text-primary)]">{formatINR(project.budget)}</span>
                   <span className="h-1 w-1 rounded-full bg-[var(--color-border-subtle)]" />
                   <span className="flex items-center gap-1">
                     <Clock size={14} />

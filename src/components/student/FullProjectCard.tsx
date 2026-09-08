@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { Clock, User2, ArrowRight } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn, formatINR } from "@/lib/utils";
 import { ProjectMatchBadge } from "./ProjectMatchBadge";
 import type { Project } from "@/types";
 
@@ -60,7 +60,7 @@ export function FullProjectCard({ project, index = 0 }: FullProjectCardProps) {
 
       {/* Budget + Duration */}
       <div className="flex items-center gap-3 text-sm">
-        <span className="font-semibold text-[var(--color-text-primary)]">{project.budget}</span>
+        <span className="font-semibold text-[var(--color-text-primary)]">{formatINR(project.budget)}</span>
         <span className="h-1 w-1 flex-shrink-0 rounded-full bg-[var(--color-border-subtle)]" />
         <span className="text-[var(--color-text-secondary)]">{project.duration}</span>
         <span className="h-1 w-1 flex-shrink-0 rounded-full bg-[var(--color-border-subtle)]" />

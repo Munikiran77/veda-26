@@ -2,7 +2,7 @@
 
 import { motion } from "framer-motion";
 import { ArrowRight } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn, formatINR } from "@/lib/utils";
 
 interface ProjectCardProps {
   title: string;
@@ -53,7 +53,7 @@ export function ProjectCard({
 
       {/* Meta */}
       <div className="flex items-center gap-4 text-sm text-[var(--color-text-secondary)]">
-        <span className="font-semibold text-[var(--color-text-primary)]">{budget}</span>
+        <span className="font-semibold text-[var(--color-text-primary)]">{formatINR(budget)}</span>
         <span className="h-1 w-1 rounded-full bg-[var(--color-border-subtle)]" />
         <span>{duration}</span>
       </div>

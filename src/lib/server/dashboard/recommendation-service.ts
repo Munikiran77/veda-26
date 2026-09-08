@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { UserRole, ProjectStatus } from "@prisma/client";
 import { AuthenticatedUser } from "../auth/context";
+import { formatINR } from "@/lib/utils";
 
 export async function getRecommendedProjects(auth: AuthenticatedUser) {
   if (auth.role !== UserRole.STUDENT) {
@@ -81,7 +82,7 @@ export async function getRecommendedProjects(auth: AuthenticatedUser) {
       id: project.id,
       title: project.title,
       description: project.description,
-      budget: project.budget,
+      budget: formatINR(project.budget || 5000),
       duration: project.duration,
       match: matchScore,
       skills: projectSkillNames,

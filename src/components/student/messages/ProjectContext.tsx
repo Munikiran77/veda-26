@@ -7,6 +7,7 @@ import { allProjects } from "@/data/projects";
 import { allWorkProjects } from "@/data/work";
 import type { Conversation } from "@/types";
 import { WorkProjectProgress } from "@/components/student/work";
+import { formatINR } from "@/lib/utils";
 
 interface ProjectContextProps {
   conversation: Conversation;
@@ -22,7 +23,7 @@ export function ProjectContext({ conversation, isOpen, onClose, viewerRole = "st
 
   const title = conversation.project?.title || fallbackProject?.title || conversation.projectTitle;
   const description = conversation.project?.description || fallbackProject?.description || "";
-  const budget = conversation.project?.budget || fallbackProject?.budget || "₹0";
+  const budget = formatINR(conversation.project?.budget || fallbackProject?.budget || 0);
   const deadline = conversation.project?.deadline || fallbackProject?.deadline || "TBD";
   const clientName = conversation.client;
 

@@ -15,6 +15,7 @@ import { apiClient } from "@/lib/api-client";
 import { mapWorkContract } from "@/lib/api-mappers";
 import type { WorkTab } from "@/components/student/work";
 import type { SortOption, WorkProject, Project } from "@/types";
+import { formatINR } from "@/lib/utils";
 
 type WorkWithProject = WorkProject & { project: Project };
 
@@ -194,20 +195,20 @@ export default function MyWorkPage() {
                   <div>
                     <p className="text-xs font-medium text-[var(--color-text-secondary)]">Available Balance</p>
                     <p className="text-2xl font-bold text-[var(--color-text-primary)]">
-                      ₹{earnings ? parseFloat(earnings.availableBalance).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "0.00"}
+                      {formatINR(earnings?.availableBalance ?? 0, { showDecimals: true })}
                     </p>
                   </div>
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-xs font-medium text-[var(--color-text-secondary)]">In Escrow (Pending)</p>
                       <p className="text-sm font-semibold text-amber-600">
-                        ₹{earnings ? parseFloat(earnings.pendingBalance).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "0.00"}
+                        {formatINR(earnings?.pendingBalance ?? 0, { showDecimals: true })}
                       </p>
                     </div>
                     <div className="text-right">
                       <p className="text-xs font-medium text-[var(--color-text-secondary)]">Total Cleared</p>
                       <p className="text-sm font-semibold text-emerald-600">
-                        ₹{earnings ? parseFloat(earnings.totalEarned).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "0.00"}
+                        {formatINR(earnings?.totalEarned ?? 0, { showDecimals: true })}
                       </p>
                     </div>
                   </div>

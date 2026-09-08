@@ -3,7 +3,7 @@
 import { motion } from "framer-motion";
 import { ArrowRight, User2, Clock } from "lucide-react";
 import Link from "next/link";
-import { cn } from "@/lib/utils";
+import { cn, formatINR } from "@/lib/utils";
 import type { WorkProject, Project } from "@/types";
 import { WorkProjectProgress } from "./WorkProjectProgress";
 
@@ -41,7 +41,7 @@ export function WorkProjectCard({ work, project, index = 0 }: WorkProjectCardPro
           </div>
 
           <div className="flex flex-wrap items-center gap-4 text-sm">
-            <span className="font-semibold text-[var(--color-text-primary)]">{project.budget}</span>
+            <span className="font-semibold text-[var(--color-text-primary)]">{formatINR(project.budget)}</span>
             <span className="h-1 w-1 rounded-full bg-[var(--color-border-subtle)]" />
             <span className="flex items-center gap-1 text-[var(--color-text-secondary)]">
               <Clock size={14} />

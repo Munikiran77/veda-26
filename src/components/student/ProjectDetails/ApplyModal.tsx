@@ -6,6 +6,7 @@ import { X, ArrowRight, CheckCircle2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import type { Project } from "@/types";
 import { apiClient } from "@/lib/api-client";
+import { formatINR } from "@/lib/utils";
 
 interface ApplyModalProps {
   isOpen: boolean;
@@ -44,7 +45,7 @@ export function ApplyModal({ isOpen, onClose, project, onSuccess }: ApplyModalPr
     try {
       await apiClient.post(`/api/projects/${project.id}/applications`, {
         proposal: proposal.trim(),
-        proposedBudget: `₹${budget.trim()}`,
+        proposedBudget: formatINR(budget.trim()),
         estimatedCompletion: duration,
       });
 
@@ -158,7 +159,7 @@ export function ApplyModal({ isOpen, onClose, project, onSuccess }: ApplyModalPr
                       <input
                         type="text"
                         value={budget}
-                        onChange={(e) => setBudget(e.target.value)}
+                        onChange={(e) => setBudget(e.target.value.replace(/[^0-9]/g, ""))}
                         className={`w-full rounded-xl border py-3 pl-8 pr-4 text-sm text-[var(--color-text-primary)] outline-none transition-colors ${
                           errors.budget ? "border-red-400 bg-red-50/30 focus:border-red-500 focus:ring-2 focus:ring-red-100" : "border-[var(--color-border-subtle)] focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
                         }`}

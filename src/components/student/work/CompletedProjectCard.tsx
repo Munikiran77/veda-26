@@ -4,6 +4,7 @@ import { motion } from "framer-motion";
 import { ArrowRight, User2, Star, CheckCircle2 } from "lucide-react";
 import Link from "next/link";
 import type { WorkProject, Project } from "@/types";
+import { formatINR } from "@/lib/utils";
 
 interface CompletedProjectCardProps {
   work: WorkProject;
@@ -35,7 +36,7 @@ export function CompletedProjectCard({ work, project, index = 0 }: CompletedProj
         </div>
 
         <div className="flex flex-col items-start gap-1 sm:items-end flex-shrink-0">
-          <span className="text-xl font-bold text-[var(--color-text-primary)]">{work.earnings}</span>
+          <span className="text-xl font-bold text-[var(--color-text-primary)]">{formatINR(work.earnings || project.budget)}</span>
           <span className="text-xs font-medium uppercase tracking-wider text-[var(--color-text-secondary)]">Earnings</span>
         </div>
       </div>

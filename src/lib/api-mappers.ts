@@ -6,6 +6,7 @@ import type {
   WorkProject,
   WorkStatus,
 } from "@/types";
+import { formatINR } from "@/lib/utils";
 
 export function formatPrismaProjectStatus(status: string): ProjectStatus {
   switch (status?.toUpperCase()) {
@@ -78,10 +79,12 @@ export function mapProject(dbProject: any): Project {
       ? dbProject.deliverables
       : [],
     category: dbProject.category || "General",
-    budgetValue: dbProject.budgetValue ?? 5000,
-    budget: dbProject.budget?.startsWith("₹")
-      ? dbProject.budget
-      : `₹${dbProject.budget || dbProject.budgetValue || "5,000"}`,
+    budgetValue:
+      dbProject.budgetValue ??
+      (typeof dbProject.budget === "string"
+        ? parseInt(dbProject.budget.replace(/[^0-9]/g, ""), 10) || 5000
+        : 5000),
+    budget: formatINR(dbProject.budget || dbProject.budgetValue || 5000),
     duration: dbProject.duration || "2 weeks",
     durationWeeks: dbProject.durationWeeks ?? 2,
     deadline: dbProject.deadline || undefined,
@@ -135,7 +138,7 @@ export function mapApplication(dbApp: any): Application {
     studentId: dbApp.studentId,
     status: formatPrismaApplicationStatus(dbApp.status),
     proposal: dbApp.proposal || "",
-    proposedBudget: dbApp.proposedBudget || undefined,
+    proposedBudget: dbApp.proposedBudget ? formatINR(dbApp.proposedBudget) : undefined,
     estimatedCompletion: dbApp.estimatedCompletion || undefined,
     appliedAt: dbApp.appliedAt
       ? new Date(dbApp.appliedAt).toISOString()
@@ -183,7 +186,7 @@ export function mapWorkContract(
             year: "numeric",
           })
         : undefined,
-    earnings: project.budget || undefined,
+    earnings: project.budget ? formatINR(project.budget) : undefined,
     lastActivity:
       dbContract.lastActivity || "Work contract active and in progress",
     milestones: [
@@ -267,7 +270,7 @@ export function mapTalentStudent(dbStudent: any) {
     skills,
     experience: (dbStudent.experienceLevel || "Intermediate") as any,
     availability: (dbStudent.availability || "Available Now") as any,
-    hourlyRate: dbStudent.hourlyRate || "₹500/hr",
+    hourlyRate: formatINR(dbStudent.hourlyRate || "₹500/hr"),
     portfolioSummary:
       portfolioProjects[0]?.description ||
       dbStudent.about ||
@@ -327,7 +330,7 @@ export function mapStudentProfile(dbStudent: any) {
     location: dbStudent.location || "Bengaluru, India",
     college: dbStudent.college || "University",
     availability: dbStudent.availability || "Available for freelance projects",
-    hourlyRate: dbStudent.hourlyRate || "₹500/hr",
+    hourlyRate: formatINR(dbStudent.hourlyRate || "₹500/hr"),
     completionPercentage: dbStudent.profileStrength ?? 86,
     isPublic: typeof dbStudent.isPublic === "boolean" ? dbStudent.isPublic : true,
     joinedDate: dbStudent.createdAt

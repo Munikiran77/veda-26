@@ -3,6 +3,7 @@
 import { motion } from "framer-motion";
 import { ArrowRight, CheckCircle2 } from "lucide-react";
 import type { Project } from "@/types";
+import { formatINR } from "@/lib/utils";
 
 interface ApplyCardProps {
   project: Project;
@@ -22,7 +23,7 @@ export function ApplyCard({ project, onApplyClick, hasApplied = false }: ApplyCa
     >
       <div className="mb-6 flex flex-col gap-4">
         <div>
-          <p className="text-2xl font-bold text-[var(--color-text-primary)]">{project.budget}</p>
+          <p className="text-2xl font-bold text-[var(--color-text-primary)]">{formatINR(project.budget)}</p>
           <p className="text-sm font-medium text-[var(--color-text-secondary)]">Project Budget</p>
         </div>
         

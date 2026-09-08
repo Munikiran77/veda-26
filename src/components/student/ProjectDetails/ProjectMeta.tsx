@@ -2,10 +2,11 @@
 
 import { Clock, IndianRupee, Briefcase, Calendar, User2 } from "lucide-react";
 import type { Project } from "@/types";
+import { formatINR } from "@/lib/utils";
 
 export function ProjectMeta({ project }: { project: Project }) {
   const metaItems = [
-    { icon: IndianRupee, label: "Budget", value: project.budget },
+    { icon: IndianRupee, label: "Budget", value: formatINR(project.budget) },
     { icon: Clock, label: "Duration", value: project.duration },
     { icon: Briefcase, label: "Experience", value: project.experienceLevel },
     { icon: User2, label: "Posted", value: project.postedAt },

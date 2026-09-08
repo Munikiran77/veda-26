@@ -4,6 +4,7 @@ import { motion } from "framer-motion";
 import { ExternalLink, Code, Plus, ArrowRight, Star } from "lucide-react";
 import Link from "next/link";
 import type { PortfolioProject, WorkProject } from "@/types";
+import { formatINR } from "@/lib/utils";
 
 export function PortfolioSection({ portfolio, onAddProject }: { portfolio: PortfolioProject[]; onAddProject: () => void }) {
   return (
@@ -126,7 +127,7 @@ export function SkillBridgeProjects({ projects }: { projects: (WorkProject & { p
             
             <div className="flex flex-col gap-3 sm:items-end">
               <div className="text-right hidden sm:block">
-                <span className="text-lg font-bold text-[var(--color-text-primary)]">{work.earnings}</span>
+                <span className="text-lg font-bold text-[var(--color-text-primary)]">{formatINR(work.earnings || work.project?.budget)}</span>
                 <p className="text-xs uppercase tracking-wider text-[var(--color-text-secondary)]">Earnings</p>
               </div>
               <Link

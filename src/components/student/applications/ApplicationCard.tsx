@@ -3,7 +3,7 @@
 import { motion } from "framer-motion";
 import { ArrowRight, Clock, User2 } from "lucide-react";
 import Link from "next/link";
-import { cn } from "@/lib/utils";
+import { cn, formatINR } from "@/lib/utils";
 import type { Application, Project } from "@/types";
 import { ProjectMatchBadge } from "@/components/student";
 import { ApplicationProgress } from "./ApplicationProgress";
@@ -49,7 +49,7 @@ export function ApplicationCard({ application, project, index = 0 }: Application
           </p>
 
           <div className="flex flex-wrap items-center gap-3 text-sm">
-            <span className="font-semibold text-[var(--color-text-primary)]">{project.budget}</span>
+            <span className="font-semibold text-[var(--color-text-primary)]">{formatINR(project.budget)}</span>
             <span className="h-1 w-1 flex-shrink-0 rounded-full bg-[var(--color-border-subtle)]" />
             <span className="text-[var(--color-text-secondary)]">{project.duration}</span>
             <span className="h-1 w-1 flex-shrink-0 rounded-full bg-[var(--color-border-subtle)]" />
