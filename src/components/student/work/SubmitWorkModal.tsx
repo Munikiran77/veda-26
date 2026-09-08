@@ -3,28 +3,102 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, ArrowRight, UploadCloud, CheckCircle2 } from "lucide-react";
+import { apiClient } from "@/lib/api-client";
 
 interface SubmitWorkModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSuccess: () => void;
+  contractId: string;
+  onSuccess: (updatedContract?: any) => void;
 }
 
-export function SubmitWorkModal({ isOpen, onClose, onSuccess }: SubmitWorkModalProps) {
+export function SubmitWorkModal({ isOpen, onClose, contractId, onSuccess }: SubmitWorkModalProps) {
   const [message, setMessage] = useState("");
   const [link, setLink] = useState("");
   const [file, setFile] = useState<File | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!message.trim() && !link.trim() && !file) return;
+    if (isSubmitting) return;
 
+    const trimmedMessage = message.trim();
+    const trimmedLink = link.trim();
+
+    if (!trimmedMessage && !trimmedLink && !file) {
+      setError("Please provide a submission message, link, or attachment.");
+      return;
+    }
+
+    if (!trimmedMessage) {
+      setError("Submission message is required.");
+      return;
+    }
+
+    if (trimmedLink) {
+      try {
+        const url = new URL(trimmedLink.startsWith("http") ? trimmedLink : `https://${trimmedLink}`);
+        if (!["http:", "https:"].includes(url.protocol)) {
+          throw new Error();
+        }
+      } catch {
+        setError("Please enter a valid URL (e.g. https://github.com/...)");
+        return;
+      }
+    }
+
+    if (file && file.size > 25 * 1024 * 1024) {
+      setError("File exceeds maximum permitted size of 25MB.");
+      return;
+    }
+
+    setError(null);
     setIsSubmitting(true);
-    setTimeout(() => {
+
+    try {
+      let uploadedFile: any = null;
+      if (file) {
+        const formData = new FormData();
+        formData.append("file", file);
+        formData.append("category", "WORK_DELIVERABLE");
+        formData.append("contextId", contractId);
+
+        uploadedFile = await apiClient.upload<any>("/api/files/upload", formData);
+      }
+
+      const formattedLink = trimmedLink
+        ? trimmedLink.startsWith("http")
+          ? trimmedLink
+          : `https://${trimmedLink}`
+        : null;
+
+      const activityParts = [`Submitted: ${trimmedMessage}`];
+      if (formattedLink) {
+        activityParts.push(`Link: ${formattedLink}`);
+      }
+      if (uploadedFile?.originalName || file?.name) {
+        activityParts.push(`Attachment: ${uploadedFile?.originalName || file?.name}`);
+      }
+      const lastActivity = activityParts.join(" • ");
+
+      const result = await apiClient.patch<any>(`/api/work/${contractId}`, {
+        status: "AWAITING_REVIEW",
+        progress: 100,
+        lastActivity,
+      });
+
+      setMessage("");
+      setLink("");
+      setFile(null);
+      setError(null);
+
+      onSuccess(result?.contract || result);
+    } catch (err: any) {
+      setError(err?.message || "Failed to submit work deliverables. Please try again.");
+    } finally {
       setIsSubmitting(false);
-      onSuccess();
-    }, 1000);
+    }
   };
 
   return (
@@ -64,6 +138,19 @@ export function SubmitWorkModal({ isOpen, onClose, onSuccess }: SubmitWorkModalP
 
             <div className="max-h-[70vh] overflow-y-auto px-6 py-6">
               <form id="submit-form" onSubmit={handleSubmit} className="flex flex-col gap-6">
+                {error && (
+                  <div className="rounded-xl border border-red-200 bg-red-50 p-3.5 text-xs font-medium text-red-700 flex items-center justify-between">
+                    <span>{error}</span>
+                    <button
+                      type="button"
+                      onClick={() => setError(null)}
+                      className="text-red-500 hover:text-red-700 font-bold ml-2"
+                      aria-label="Dismiss error"
+                    >
+                      &times;
+                    </button>
+                  </div>
+                )}
                 
                 {/* Message */}
                 <div>
@@ -73,7 +160,10 @@ export function SubmitWorkModal({ isOpen, onClose, onSuccess }: SubmitWorkModalP
                   <textarea
                     rows={4}
                     value={message}
-                    onChange={(e) => setMessage(e.target.value)}
+                    onChange={(e) => {
+                      setMessage(e.target.value);
+                      if (error) setError(null);
+                    }}
                     required
                     placeholder="Describe what you've completed and any important notes for the client..."
                     className="w-full rounded-xl border border-[var(--color-border-subtle)] p-3 text-sm text-[var(--color-text-primary)] outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-colors"
@@ -88,7 +178,10 @@ export function SubmitWorkModal({ isOpen, onClose, onSuccess }: SubmitWorkModalP
                   <input
                     type="url"
                     value={link}
-                    onChange={(e) => setLink(e.target.value)}
+                    onChange={(e) => {
+                      setLink(e.target.value);
+                      if (error) setError(null);
+                    }}
                     placeholder="https://github.com/..."
                     className="w-full rounded-xl border border-[var(--color-border-subtle)] p-3 text-sm text-[var(--color-text-primary)] outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-colors"
                   />
@@ -106,7 +199,7 @@ export function SubmitWorkModal({ isOpen, onClose, onSuccess }: SubmitWorkModalP
                         <p className="mb-1 text-sm text-gray-500">
                           <span className="font-semibold text-blue-600">Click to upload</span> or drag and drop
                         </p>
-                        <p className="text-xs text-gray-400">ZIP, PDF, images (MAX. 10MB)</p>
+                        <p className="text-xs text-gray-400">ZIP, PDF, images (MAX. 25MB)</p>
                       </div>
                       <input 
                         type="file" 
@@ -114,15 +207,25 @@ export function SubmitWorkModal({ isOpen, onClose, onSuccess }: SubmitWorkModalP
                         onChange={(e) => {
                           if (e.target.files && e.target.files.length > 0) {
                             setFile(e.target.files[0]);
+                            if (error) setError(null);
                           }
                         }}
                       />
                     </label>
                   </div>
                   {file && (
-                    <p className="mt-2 text-xs font-medium text-[var(--color-text-primary)]">
-                      Selected file: {file.name}
-                    </p>
+                    <div className="mt-2 flex items-center justify-between rounded-lg bg-blue-50 border border-blue-100 px-3 py-1.5 text-xs text-blue-800">
+                      <span className="truncate font-medium">Selected file: {file.name}</span>
+                      <button
+                        type="button"
+                        onClick={() => setFile(null)}
+                        className="ml-2 text-blue-500 hover:text-blue-700 font-bold"
+                        title="Remove file"
+                        aria-label="Remove file"
+                      >
+                        &times;
+                      </button>
+                    </div>
                   )}
                 </div>
               </form>
@@ -132,18 +235,28 @@ export function SubmitWorkModal({ isOpen, onClose, onSuccess }: SubmitWorkModalP
               <button
                 type="button"
                 onClick={onClose}
-                className="rounded-xl px-5 py-2.5 text-sm font-semibold text-[var(--color-text-secondary)] hover:bg-[var(--color-canvas-surface)] transition-colors"
+                disabled={isSubmitting}
+                className="rounded-xl px-5 py-2.5 text-sm font-semibold text-[var(--color-text-secondary)] hover:bg-[var(--color-canvas-surface)] transition-colors disabled:opacity-50"
               >
                 Cancel
               </button>
               <button
                 type="submit"
                 form="submit-form"
-                disabled={isSubmitting || (!message.trim() && !link.trim() && !file)}
-                className="group flex items-center gap-2 rounded-xl bg-blue-600 px-6 py-2.5 text-sm font-semibold text-white hover:bg-blue-700 transition-colors disabled:opacity-70 disabled:cursor-not-allowed"
+                disabled={isSubmitting || !message.trim()}
+                className="group flex items-center gap-2 rounded-xl bg-blue-600 px-6 py-2.5 text-sm font-semibold text-white hover:bg-blue-700 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
               >
-                {isSubmitting ? "Submitting..." : "Submit for Review"}
-                {!isSubmitting && <ArrowRight size={16} className="transition-transform group-hover:translate-x-1" />}
+                {isSubmitting ? (
+                  <>
+                    <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                    <span>Submitting...</span>
+                  </>
+                ) : (
+                  <>
+                    <span>Submit for Review</span>
+                    <ArrowRight size={16} className="transition-transform group-hover:translate-x-1" />
+                  </>
+                )}
               </button>
             </div>
           </motion.div>

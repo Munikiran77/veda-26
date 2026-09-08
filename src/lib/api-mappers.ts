@@ -176,6 +176,14 @@ export function mapWorkContract(
     startDate: dbContract.createdAt
       ? new Date(dbContract.createdAt).toISOString()
       : new Date().toISOString(),
+    completedAt:
+      dbContract.status === "COMPLETED" && dbContract.updatedAt
+        ? new Date(dbContract.updatedAt).toLocaleDateString("en-US", {
+            month: "short",
+            year: "numeric",
+          })
+        : undefined,
+    earnings: project.budget || undefined,
     lastActivity:
       dbContract.lastActivity || "Work contract active and in progress",
     milestones: [
@@ -266,6 +274,7 @@ export function mapTalentStudent(dbStudent: any) {
       "Active student portfolio on SkillBridge",
     portfolioProjects,
     bio: dbStudent.about || "Passionate student builder specializing in software development.",
+    isPublic: typeof dbStudent.isPublic === "boolean" ? dbStudent.isPublic : true,
     joinedDate: dbStudent.createdAt
       ? new Date(dbStudent.createdAt).toLocaleDateString("en-US", { month: "short", year: "numeric" })
       : "Aug 2026",
@@ -320,7 +329,7 @@ export function mapStudentProfile(dbStudent: any) {
     availability: dbStudent.availability || "Available for freelance projects",
     hourlyRate: dbStudent.hourlyRate || "₹500/hr",
     completionPercentage: dbStudent.profileStrength ?? 86,
-    isPublic: true,
+    isPublic: typeof dbStudent.isPublic === "boolean" ? dbStudent.isPublic : true,
     joinedDate: dbStudent.createdAt
       ? new Date(dbStudent.createdAt).toLocaleDateString("en-US", { month: "short", year: "numeric" })
       : "Aug 2026",

@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { User, StudentProfile, ClientProfile, UserRole } from "@prisma/client";
-import { extractSessionTokenFromRequest, verifySessionToken } from "./session";
+import { extractSessionTokenFromRequest, verifySessionToken, SESSION_COOKIE_NAME } from "./session";
+import { cookies } from "next/headers";
 
 export class AuthError extends Error {
   status: number;
@@ -145,3 +146,34 @@ export async function requireClient(req: Request): Promise<AuthenticatedClient> 
   }
   return auth as AuthenticatedClient;
 }
+
+export async function getServerSession(): Promise<AuthenticatedUser | null> {
+  try {
+    const cookieStore = await cookies();
+    const token = cookieStore.get(SESSION_COOKIE_NAME)?.value;
+    if (!token) return null;
+
+    const payload = await verifySessionToken(token);
+    if (!payload || !payload.userId) return null;
+
+    const user = await prisma.user.findUnique({
+      where: { id: payload.userId },
+      include: {
+        studentProfile: true,
+        clientProfile: true,
+      },
+    });
+
+    if (!user) return null;
+
+    return {
+      user,
+      role: user.role,
+      studentProfile: user.studentProfile,
+      clientProfile: user.clientProfile,
+    };
+  } catch {
+    return null;
+  }
+}
+

@@ -3,30 +3,35 @@
 import { useState, useRef, KeyboardEvent } from "react";
 import { Paperclip, Send, X } from "lucide-react";
 import { cn } from "@/lib/utils";
-import type { MessageAttachment } from "@/types";
 
 interface MessageInputProps {
-  onSend: (content: string, attachment?: MessageAttachment) => Promise<boolean | void> | void;
+  onSend: (content: string, file?: File | null) => Promise<boolean | void> | void;
   disabled?: boolean;
+}
+
+function formatFileSize(bytes: number): string {
+  const sizeKB = bytes / 1024;
+  const sizeMB = sizeKB / 1024;
+  return sizeMB >= 1 ? `${sizeMB.toFixed(1)} MB` : `${Math.round(sizeKB)} KB`;
 }
 
 export function MessageInput({ onSend, disabled }: MessageInputProps) {
   const [text, setText] = useState("");
-  const [attachment, setAttachment] = useState<MessageAttachment | null>(null);
+  const [file, setFile] = useState<File | null>(null);
   const [isSending, setIsSending] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleSend = async () => {
     const trimmed = text.trim();
-    if (!trimmed && !attachment) return;
+    if (!trimmed && !file) return;
     if (disabled || isSending) return;
 
     setIsSending(true);
     try {
-      const result = await onSend(trimmed, attachment || undefined);
+      const result = await onSend(trimmed, file);
       if (result !== false) {
         setText("");
-        setAttachment(null);
+        setFile(null);
       }
     } finally {
       setIsSending(false);
@@ -41,29 +46,35 @@ export function MessageInput({ onSend, disabled }: MessageInputProps) {
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const sizeKB = file.size / 1024;
-    const sizeMB = sizeKB / 1024;
-    const size = sizeMB >= 1 ? `${sizeMB.toFixed(1)} MB` : `${Math.round(sizeKB)} KB`;
-    setAttachment({ id: `att_${Date.now()}`, name: file.name, size });
+    const selectedFile = e.target.files?.[0];
+    if (!selectedFile) return;
+
+    if (selectedFile.size > 15 * 1024 * 1024) {
+      alert("Attachment exceeds maximum permitted size of 15MB");
+      e.target.value = "";
+      return;
+    }
+
+    setFile(selectedFile);
     // Reset input so the same file can be re-selected
     e.target.value = "";
   };
 
-  const canSend = (text.trim().length > 0 || !!attachment) && !disabled && !isSending;
+  const canSend = (text.trim().length > 0 || !!file) && !disabled && !isSending;
 
   return (
     <div className="flex-shrink-0 border-t border-[var(--color-border-subtle)] bg-white p-4 sm:px-6">
       {/* Attachment preview */}
-      {attachment && (
+      {file && (
         <div className="mb-2 flex items-center gap-2 rounded-lg bg-blue-50 border border-blue-100 px-3 py-2 text-sm w-fit">
           <Paperclip size={14} className="text-blue-500" />
-          <span className="font-medium text-blue-700">{attachment.name}</span>
-          {attachment.size && <span className="text-blue-400">· {attachment.size}</span>}
+          <span className="font-medium text-blue-700">{file.name}</span>
+          <span className="text-blue-400">· {formatFileSize(file.size)}</span>
           <button
-            onClick={() => setAttachment(null)}
+            onClick={() => setFile(null)}
             className="ml-1 rounded-full text-blue-400 hover:text-blue-600"
+            title="Remove attachment"
+            aria-label="Remove attachment"
           >
             <X size={14} />
           </button>
@@ -114,8 +125,13 @@ export function MessageInput({ onSend, disabled }: MessageInputProps) {
               ? "bg-blue-600 text-white hover:bg-blue-700 shadow-sm"
               : "bg-gray-100 text-gray-400 cursor-not-allowed"
           )}
+          aria-label="Send message"
         >
-          <Send size={18} />
+          {isSending ? (
+            <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+          ) : (
+            <Send size={18} />
+          )}
         </button>
       </div>
       <p className="mt-1.5 text-[11px] text-gray-400 hidden sm:block">

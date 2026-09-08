@@ -19,9 +19,8 @@ import {
 } from "@/components/student/profile";
 import { useStudentAuth } from "@/components/student/student-auth-context";
 import { apiClient } from "@/lib/api-client";
-import { mapStudentProfile } from "@/lib/api-mappers";
-import { getAllWorkProjects } from "@/data/work";
-import type { StudentProfile, PortfolioProject } from "@/types";
+import { mapStudentProfile, mapWorkContract } from "@/lib/api-mappers";
+import type { StudentProfile, PortfolioProject, WorkProject, Project } from "@/types";
 import { Loader2, AlertCircle } from "lucide-react";
 
 function StudentProfileContent() {
@@ -29,6 +28,10 @@ function StudentProfileContent() {
   const [profile, setProfile] = useState<StudentProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  const [completedProjects, setCompletedProjects] = useState<(WorkProject & { project: Project })[]>([]);
+  const [isProjectsLoading, setIsProjectsLoading] = useState(false);
+  const [isVisibilitySaving, setIsVisibilitySaving] = useState(false);
 
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isAddPortfolioOpen, setIsAddPortfolioOpen] = useState(false);
@@ -52,22 +55,65 @@ function StudentProfileContent() {
     }
   }, [studentTargetId]);
 
+  const loadWorkContracts = useCallback(async () => {
+    try {
+      setIsProjectsLoading(true);
+      const data = await apiClient.get<any[]>("/api/work");
+      if (Array.isArray(data)) {
+        const mapped = data
+          .map((c) => mapWorkContract(c))
+          .filter((w) => Boolean(w && w.status === "Completed"));
+        setCompletedProjects(mapped);
+      }
+    } catch (err: any) {
+      console.error("Failed to load completed work contracts:", err);
+    } finally {
+      setIsProjectsLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
     if (!isAuthLoading) {
       loadProfile();
+      loadWorkContracts();
     }
-  }, [isAuthLoading, loadProfile]);
+  }, [isAuthLoading, loadProfile, loadWorkContracts]);
 
-  // SkillBridge projects & reviews
-  const completedProjects = getAllWorkProjects().filter((w) => w.status === "Completed");
+  // SkillBridge reviews: extract from real completed projects if any exist
   const reviews = completedProjects
-    .filter((w) => w.review && w.rating)
+    .filter((w) => Boolean(w.review && w.rating))
     .map((w) => ({
       id: w.id,
       rating: w.rating!,
       review: w.review!,
-      client: w.project.client!,
+      client: typeof w.project.client === "string" ? w.project.client : "Client",
     }));
+
+  const handleToggleVisibility = async () => {
+    if (!profile || isVisibilitySaving) return;
+    const previousState = profile.isPublic;
+    const nextState = !previousState;
+
+    setIsVisibilitySaving(true);
+    try {
+      // Call authenticated student profile update API to persist in PostgreSQL
+      const updated = await apiClient.patch<any>(`/api/students/${profile.id}`, {
+        isPublic: nextState,
+      });
+
+      if (updated) {
+        setProfile(mapStudentProfile(updated));
+      } else {
+        setProfile((prev) => (prev ? { ...prev, isPublic: nextState } : null));
+      }
+    } catch (err: any) {
+      // Revert if API fails
+      setProfile((prev) => (prev ? { ...prev, isPublic: previousState } : null));
+      alert(err?.message || "Failed to update profile visibility.");
+    } finally {
+      setIsVisibilitySaving(false);
+    }
+  };
 
   const handleSaveProfile = async (updated: StudentProfile) => {
     if (!profile) return;
@@ -165,7 +211,8 @@ function StudentProfileContent() {
             <div className="flex flex-col">
               <ProfileVisibility
                 isPublic={profile.isPublic}
-                onToggle={() => setProfile({ ...profile, isPublic: !profile.isPublic })}
+                onToggle={handleToggleVisibility}
+                isLoading={isVisibilitySaving}
               />
               <SkillProfile skillProfile={profile.skillProfile} />
               <SkillsSection profile={profile} />
@@ -191,6 +238,7 @@ function StudentProfileContent() {
             isOpen={isShareModalOpen}
             onClose={() => setIsShareModalOpen(false)}
             username={profile.name}
+            studentId={profile.id}
           />
         </>
       )}

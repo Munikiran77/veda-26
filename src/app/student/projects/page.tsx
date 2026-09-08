@@ -111,9 +111,11 @@ export default function FindProjectsPage() {
     // 3. Sorting
     result.sort((a, b) => {
       switch (sortOption) {
-        case "Newest":
-          // Mock sorting by parsing "X hours ago", but for now just reverse id as a mock
-          return parseInt(b.id) - parseInt(a.id);
+        case "Newest": {
+          const timeA = new Date(a.createdAt || a.postedAt).getTime();
+          const timeB = new Date(b.createdAt || b.postedAt).getTime();
+          return (isNaN(timeB) ? 0 : timeB) - (isNaN(timeA) ? 0 : timeA);
+        }
         case "Budget: High to Low":
           return b.budgetValue! - a.budgetValue!;
         case "Budget: Low to High":

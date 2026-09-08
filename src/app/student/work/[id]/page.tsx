@@ -104,22 +104,35 @@ export default function WorkspacePage({ params }: WorkspacePageProps) {
 
   const { project, ...work } = workData;
 
-  const handleSubmitSuccess = async () => {
-    try {
-      await apiClient.patch(`/api/work/${id}`, {
-        status: "AWAITING_REVIEW",
-        progress: 100,
-        lastActivity: "Deliverables submitted for review",
-      });
+  const handleSubmitSuccess = (updatedContract?: any) => {
+    setIsSubmitModalOpen(false);
+    setCurrentStatus("Awaiting Review");
+    setProgress(100);
 
-      setIsSubmitModalOpen(false);
-      setCurrentStatus("Awaiting Review");
-      setProgress(100);
-      setShowSuccess(true);
-      window.scrollTo({ top: 0, behavior: "smooth" });
-    } catch (err: any) {
-      alert(err.message || "Failed to submit work.");
-    }
+    setWorkData((prev) => {
+      if (!prev) return null;
+      const lastAct = updatedContract?.lastActivity || "Deliverables submitted for review";
+      return {
+        ...prev,
+        status: "Awaiting Review",
+        progress: 100,
+        lastActivity: lastAct,
+        milestones: prev.milestones.map((m) => ({ ...m, status: "Completed" })),
+        deliverables: prev.deliverables.map((d) => ({ ...d, status: "Completed" })),
+        recentActivity: [
+          {
+            id: `act-${Date.now()}`,
+            type: "upload",
+            content: lastAct,
+            timestamp: "Just now",
+          },
+          ...prev.recentActivity,
+        ],
+      };
+    });
+
+    setShowSuccess(true);
+    window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
   return (
@@ -244,6 +257,7 @@ export default function WorkspacePage({ params }: WorkspacePageProps) {
       <SubmitWorkModal
         isOpen={isSubmitModalOpen}
         onClose={() => setIsSubmitModalOpen(false)}
+        contractId={id}
         onSuccess={handleSubmitSuccess}
       />
     </StudentLayout>
