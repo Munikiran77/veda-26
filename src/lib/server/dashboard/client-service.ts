@@ -117,6 +117,7 @@ export async function getClientDashboardMetrics(auth: AuthenticatedUser) {
       role: app.student?.headline || app.student?.college || "Student Builder",
       skills: skills.slice(0, 3),
       projectAppliedFor: app.project?.title || "Project",
+      projectId: app.project?.id || null,
       matchScore: "94%",
       status: app.status,
       appliedAt: app.appliedAt ? new Date(app.appliedAt).toISOString() : new Date().toISOString(),

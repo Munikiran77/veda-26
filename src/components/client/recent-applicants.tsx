@@ -11,6 +11,7 @@ export interface ApplicantPreviewItem {
   role: string;
   skills: string[];
   projectAppliedFor: string;
+  projectId?: string | null;
   matchScore: string;
 }
 
@@ -47,7 +48,7 @@ export function RecentApplicants({
 
         {applicants.length > 0 && (
           <Link
-            href="/client/dashboard#applicants"
+            href="/client/projects"
             className="text-[13px] font-medium text-[#0071e3] hover:underline focus-visible:outline-hidden"
           >
             View all &rarr;
@@ -110,14 +111,23 @@ export function RecentApplicants({
             {/* Action Footer */}
             <div className="mt-4 pt-3.5 border-t border-[var(--color-border-subtle)] flex items-center justify-between">
               <span className="text-[12px] text-[var(--color-text-tertiary)]">
-                Demo applicant
+                Applicant review
               </span>
-              <button
-                type="button"
-                className="inline-flex h-8 items-center justify-center rounded-full border border-[var(--color-border-subtle)] bg-white px-3.5 text-[12px] font-medium text-[var(--color-text-primary)] shadow-2xs hover:bg-[var(--color-canvas-surface)] hover:border-[var(--color-border-hover)] focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-[var(--color-accent)] transition-all"
-              >
-                View Profile
-              </button>
+              {applicant.projectId ? (
+                <Link
+                  href={`/client/projects/${applicant.projectId}/applicants`}
+                  className="inline-flex h-8 items-center justify-center rounded-full border border-[var(--color-border-subtle)] bg-white px-3.5 text-[12px] font-medium text-[var(--color-text-primary)] shadow-2xs hover:bg-[var(--color-canvas-surface)] hover:border-[var(--color-border-hover)] focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-[var(--color-accent)] transition-all"
+                >
+                  View Applicants &rarr;
+                </Link>
+              ) : (
+                <Link
+                  href="/client/projects"
+                  className="inline-flex h-8 items-center justify-center rounded-full border border-[var(--color-border-subtle)] bg-white px-3.5 text-[12px] font-medium text-[var(--color-text-primary)] shadow-2xs hover:bg-[var(--color-canvas-surface)] hover:border-[var(--color-border-hover)] focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-[var(--color-accent)] transition-all"
+                >
+                  View Projects &rarr;
+                </Link>
+              )}
             </div>
           </div>
         ))}

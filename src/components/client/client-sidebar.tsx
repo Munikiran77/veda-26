@@ -1,10 +1,11 @@
 "use client";
 
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { useClientAuth } from "./client-auth-context";
+import { apiClient } from "@/lib/api-client";
 
 export interface NavItemConfig {
   label: string;
@@ -76,7 +77,7 @@ export const CLIENT_SIDEBAR_ITEMS: NavItemConfig[] = [
   },
   {
     label: "Applicants",
-    href: "/client/dashboard#applicants",
+    href: "/client/projects",
     icon: ({ className, "aria-hidden": ariaHidden }) => (
       <svg
         className={className}
@@ -201,6 +202,52 @@ export function ClientSidebar({ isOpen, onClose, className }: ClientSidebarProps
   const pathname = usePathname();
   const { user, logout } = useClientAuth();
 
+  // Extract project ID if current pathname is in a project context
+  const projectMatch = pathname?.match(/^\/client\/projects\/([^\/]+)/);
+  const currentProjectId =
+    projectMatch && projectMatch[1] !== "new" ? projectMatch[1] : null;
+
+  // Contextual project ID for Applicants navigation
+  const [contextualProjectId, setContextualProjectId] = useState<string | null>(
+    currentProjectId
+  );
+
+  useEffect(() => {
+    if (currentProjectId) {
+      setContextualProjectId(currentProjectId);
+      try {
+        sessionStorage.setItem("skillbridge_last_client_project_id", currentProjectId);
+      } catch {}
+    } else {
+      try {
+        const saved = sessionStorage.getItem("skillbridge_last_client_project_id");
+        if (saved) {
+          setContextualProjectId(saved);
+          return;
+        }
+      } catch {}
+
+      // Fallback: dynamically resolve client's most recent project
+      let isMounted = true;
+      apiClient
+        .get<any[]>("/api/projects")
+        .then((data) => {
+          if (isMounted && Array.isArray(data) && data.length > 0) {
+            const firstId = data[0].id;
+            setContextualProjectId(firstId);
+            try {
+              sessionStorage.setItem("skillbridge_last_client_project_id", firstId);
+            } catch {}
+          }
+        })
+        .catch(() => {});
+
+      return () => {
+        isMounted = false;
+      };
+    }
+  }, [currentProjectId]);
+
   // Handle ESC key to close mobile drawer
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -271,17 +318,44 @@ export function ClientSidebar({ isOpen, onClose, className }: ClientSidebarProps
         {/* Navigation Section */}
         <nav aria-label="Client Navigation" className="flex flex-col space-y-1">
           {CLIENT_SIDEBAR_ITEMS.map((item) => {
-            const isActive =
-              pathname === item.href ||
-              (item.href !== "/client/dashboard" &&
-                !item.href.includes("#") &&
-                pathname?.startsWith(item.href));
+            const isPostProjectPage = pathname === "/client/projects/new";
+            const isApplicantsPage = Boolean(pathname?.includes("/applicants"));
+            const isProjectDetailPage = Boolean(
+              pathname?.startsWith("/client/projects/") &&
+                !isPostProjectPage &&
+                !isApplicantsPage
+            );
+
+            let isActive = false;
+            let targetHref = item.href;
+
+            if (item.label === "Dashboard") {
+              isActive = pathname === "/client/dashboard";
+            } else if (item.label === "Post a Project") {
+              isActive = isPostProjectPage;
+            } else if (item.label === "My Projects") {
+              isActive = pathname === "/client/projects" || isProjectDetailPage;
+            } else if (item.label === "Applicants") {
+              isActive = isApplicantsPage;
+              targetHref = contextualProjectId
+                ? `/client/projects/${contextualProjectId}/applicants`
+                : "/client/projects";
+            } else if (item.label === "Find Talent") {
+              isActive =
+                pathname === "/client/talent" ||
+                Boolean(pathname?.startsWith("/client/talent/"));
+            } else if (item.label === "Hired Students") {
+              isActive = pathname === "/client/hired-students";
+            } else {
+              isActive = pathname === item.href;
+            }
+
             const Icon = item.icon;
 
             return (
               <Link
                 key={item.label}
-                href={item.href}
+                href={targetHref}
                 onClick={() => {
                   if (isOpen) onClose();
                 }}

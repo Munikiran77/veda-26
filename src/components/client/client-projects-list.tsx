@@ -234,29 +234,44 @@ export function ClientProjectsList() {
                 </div>
               </div>
 
-              {/* Bottom Card Footer: Applicants count & View Project action */}
-              <div className="mt-5 pt-4 border-t border-[var(--color-border-subtle)] flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <div className="flex h-7 w-7 items-center justify-center rounded-full bg-[var(--color-canvas-surface)] text-[var(--color-text-secondary)]">
+              {/* Bottom Card Footer: Applicants count & Project actions */}
+              <div className="mt-5 pt-4 border-t border-[var(--color-border-subtle)] flex flex-wrap items-center justify-between gap-3">
+                <Link
+                  href={`/client/projects/${project.id}/applicants`}
+                  className="flex items-center gap-2 group/app hover:text-[#0071e3] transition-colors focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-[var(--color-accent)] rounded-lg py-1 px-1.5 -mx-1.5"
+                  title={`View applicants for ${project.title}`}
+                >
+                  <div className="flex h-7 w-7 items-center justify-center rounded-full bg-[var(--color-canvas-surface)] text-[var(--color-text-secondary)] group-hover/app:bg-blue-50 group-hover/app:text-[#0071e3] transition-colors">
                     <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                       <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
                       <circle cx="9" cy="7" r="4" />
                     </svg>
                   </div>
-                  <span className="text-[13px] font-medium text-[var(--color-text-primary)]">
+                  <span className="text-[13px] font-medium text-[var(--color-text-primary)] group-hover/app:text-[#0071e3]">
                     {project.applicantsCount}{" "}
-                    <span className="text-[12px] font-normal text-[var(--color-text-secondary)]">
+                    <span className="text-[12px] font-normal text-[var(--color-text-secondary)] group-hover/app:text-[#0071e3]">
                       {project.applicantsCount === 1 ? "Applicant" : "Applicants"}
                     </span>
                   </span>
-                </div>
-
-                <Link
-                  href={`/client/projects/${project.id}`}
-                  className="inline-flex h-8 items-center justify-center rounded-full border border-[var(--color-border-subtle)] bg-white px-4 text-[12px] font-medium text-[var(--color-text-primary)] shadow-2xs hover:bg-[var(--color-canvas-surface)] hover:border-[var(--color-border-hover)] focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-[var(--color-accent)] transition-all"
-                >
-                  View Project
                 </Link>
+
+                <div className="flex items-center gap-2">
+                  <Link
+                    href={`/client/projects/${project.id}/applicants`}
+                    className="inline-flex h-8 items-center justify-center gap-1.5 rounded-full border border-[var(--color-border-subtle)] bg-white px-3.5 text-[12px] font-medium text-[var(--color-text-secondary)] shadow-2xs hover:bg-[var(--color-canvas-surface)] hover:text-[var(--color-text-primary)] hover:border-[var(--color-border-hover)] focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-[var(--color-accent)] transition-all"
+                  >
+                    <span>Applicants</span>
+                    <span className="rounded-full bg-gray-100 px-1.5 py-0.2 text-[11px] font-semibold text-gray-700">
+                      {project.applicantsCount}
+                    </span>
+                  </Link>
+                  <Link
+                    href={`/client/projects/${project.id}`}
+                    className="inline-flex h-8 items-center justify-center rounded-full bg-[var(--color-text-primary)] px-4 text-[12px] font-medium text-white shadow-xs hover:bg-black focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-[var(--color-accent)] transition-all"
+                  >
+                    View Project
+                  </Link>
+                </div>
               </div>
             </div>
           ))}
