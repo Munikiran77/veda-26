@@ -3,11 +3,74 @@
 import React, { useState, useEffect, useContext, Suspense } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
+import { Check } from "lucide-react";
 import {
   useStudentAuth,
   StudentAuthProvider,
   StudentAuthContext,
 } from "@/components/student/student-auth-context";
+import { cn } from "@/lib/utils";
+
+export interface SkillCategory {
+  id: string;
+  label: string;
+  skills: string[];
+}
+
+export const INTEREST_CATEGORIES: SkillCategory[] = [
+  {
+    id: "tech",
+    label: "Development",
+    skills: [
+      "Web Development",
+      "Frontend Development",
+      "Backend Development",
+      "Full-Stack Development",
+      "Mobile App Development",
+      "React",
+      "Next.js",
+      "Node.js",
+      "Python",
+    ],
+  },
+  {
+    id: "data-ai",
+    label: "Data & AI",
+    skills: [
+      "Artificial Intelligence",
+      "Machine Learning",
+      "Data Science",
+      "Data Analytics",
+      "Cloud Computing",
+      "Cybersecurity",
+      "DevOps",
+    ],
+  },
+  {
+    id: "design",
+    label: "Design & Creative",
+    skills: [
+      "UI/UX Design",
+      "Graphic Design",
+      "Product Design",
+      "Video Editing",
+      "Motion Graphics",
+      "3D Design",
+    ],
+  },
+  {
+    id: "business",
+    label: "Marketing & Content",
+    skills: [
+      "Digital Marketing",
+      "Social Media Management",
+      "Content Writing",
+      "Copywriting",
+      "SEO",
+      "Technical Writing",
+    ],
+  },
+];
 
 function StudentSignupFormInner() {
   const router = useRouter();
@@ -25,11 +88,25 @@ function StudentSignupFormInner() {
 
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
-  const [college, setCollege] = useState("");
-  const [headline, setHeadline] = useState("");
   const [password, setPassword] = useState("");
+  const [selectedInterests, setSelectedInterests] = useState<string[]>([]);
+  const [activeCategory, setActiveCategory] = useState<string>("tech");
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const toggleInterest = (skill: string) => {
+    setError(null);
+    setSelectedInterests((prev) => {
+      if (prev.includes(skill)) {
+        return prev.filter((s) => s !== skill);
+      }
+      if (prev.length >= 5) {
+        setError("You can select up to 5 fields of interest.");
+        return prev;
+      }
+      return [...prev, skill];
+    });
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -47,6 +124,11 @@ function StudentSignupFormInner() {
       return;
     }
 
+    if (selectedInterests.length === 0) {
+      setError("Please select at least 1 field of interest.");
+      return;
+    }
+
     if (!password || password.length < 6) {
       setError("Password must be at least 6 characters long.");
       return;
@@ -55,13 +137,7 @@ function StudentSignupFormInner() {
     setIsSubmitting(true);
 
     try {
-      await signup(
-        cleanName,
-        cleanEmail,
-        password,
-        headline.trim() || undefined,
-        college.trim() || undefined
-      );
+      await signup(cleanName, cleanEmail, password, selectedInterests);
       router.push(from.startsWith("/student") ? from : "/student");
     } catch (err: any) {
       setError(err.message || "Failed to create student account. Please try again.");
@@ -173,39 +249,100 @@ function StudentSignupFormInner() {
             />
           </div>
 
-          <div className="space-y-1.5">
-            <label
-              htmlFor="student-college"
-              className="block text-[13px] font-semibold text-[var(--color-text-primary)]"
-            >
-              College / University <span className="text-[11px] font-normal text-[var(--color-text-tertiary)]">(Optional)</span>
-            </label>
-            <input
-              id="student-college"
-              type="text"
-              value={college}
-              onChange={(e) => setCollege(e.target.value)}
-              placeholder="e.g. Stanford University or MIT"
-              autoComplete="organization"
-              className="w-full rounded-xl border border-[var(--color-border-subtle)] bg-[var(--color-canvas-bg)] px-4 py-2.5 text-[14px] text-[var(--color-text-primary)] placeholder:text-[var(--color-text-tertiary)] focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-[var(--color-accent)] transition-all"
-            />
-          </div>
+          {/* Fields of Interest / Skills Selection */}
+          <div className="space-y-2.5">
+            <div className="flex items-center justify-between">
+              <label className="block text-[13px] font-semibold text-[var(--color-text-primary)]">
+                Fields of Interest <span className="text-red-500">*</span>
+              </label>
+              <span
+                className={cn(
+                  "text-[11px] font-medium transition-colors",
+                  selectedInterests.length > 0
+                    ? "text-blue-600 font-semibold"
+                    : "text-[var(--color-text-tertiary)]"
+                )}
+              >
+                {selectedInterests.length}/5 selected
+              </span>
+            </div>
+            <p className="text-[12px] text-[var(--color-text-secondary)]">
+              Select 1 to 5 areas you&apos;d like to work on to get matched with projects.
+            </p>
 
-          <div className="space-y-1.5">
-            <label
-              htmlFor="student-headline"
-              className="block text-[13px] font-semibold text-[var(--color-text-primary)]"
-            >
-              Headline / Field of Study <span className="text-[11px] font-normal text-[var(--color-text-tertiary)]">(Optional)</span>
-            </label>
-            <input
-              id="student-headline"
-              type="text"
-              value={headline}
-              onChange={(e) => setHeadline(e.target.value)}
-              placeholder="e.g. Computer Science & Full-Stack Developer"
-              className="w-full rounded-xl border border-[var(--color-border-subtle)] bg-[var(--color-canvas-bg)] px-4 py-2.5 text-[14px] text-[var(--color-text-primary)] placeholder:text-[var(--color-text-tertiary)] focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-[var(--color-accent)] transition-all"
-            />
+            {/* Category Tabs */}
+            <div className="flex items-center gap-1.5 overflow-x-auto pb-1">
+              {INTEREST_CATEGORIES.map((cat) => (
+                <button
+                  key={cat.id}
+                  type="button"
+                  onClick={() => setActiveCategory(cat.id)}
+                  className={cn(
+                    "rounded-full px-3 py-1 text-[12px] font-medium transition-all cursor-pointer shrink-0",
+                    activeCategory === cat.id
+                      ? "bg-[var(--color-text-primary)] text-white shadow-xs"
+                      : "bg-[var(--color-canvas-surface)] text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] hover:bg-black/5"
+                  )}
+                >
+                  {cat.label}
+                </button>
+              ))}
+            </div>
+
+            {/* Interest Chips for Active Category */}
+            <div className="rounded-xl border border-[var(--color-border-subtle)] bg-[var(--color-canvas-surface)]/50 p-3 min-h-[90px]">
+              <div className="flex flex-wrap gap-1.5">
+                {INTEREST_CATEGORIES.find((c) => c.id === activeCategory)?.skills.map((skill) => {
+                  const isSelected = selectedInterests.includes(skill);
+                  return (
+                    <button
+                      key={skill}
+                      type="button"
+                      onClick={() => toggleInterest(skill)}
+                      aria-pressed={isSelected}
+                      className={cn(
+                        "inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[12px] font-medium transition-all duration-150 cursor-pointer",
+                        isSelected
+                          ? "bg-blue-600 text-white shadow-xs hover:bg-blue-700"
+                          : "bg-white text-[var(--color-text-primary)] border border-[var(--color-border-subtle)] hover:border-[var(--color-border-hover)] hover:bg-[#f5f5f7] active:bg-[#eaeaea]"
+                      )}
+                    >
+                      {isSelected ? (
+                        <Check className="h-3 w-3 shrink-0 stroke-[2.5]" />
+                      ) : (
+                        <span className="text-[var(--color-text-tertiary)] font-bold">+</span>
+                      )}
+                      <span>{skill}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Selected Summary Tags */}
+            {selectedInterests.length > 0 && (
+              <div className="flex flex-wrap items-center gap-1.5 pt-1">
+                <span className="text-[11px] font-medium text-[var(--color-text-tertiary)] mr-1">
+                  Selected:
+                </span>
+                {selectedInterests.map((skill) => (
+                  <span
+                    key={skill}
+                    className="inline-flex items-center gap-1 rounded-md bg-blue-500/10 px-2 py-0.5 text-[11px] font-medium text-blue-700"
+                  >
+                    {skill}
+                    <button
+                      type="button"
+                      onClick={() => toggleInterest(skill)}
+                      className="text-blue-600 hover:text-blue-900 ml-0.5 cursor-pointer font-bold"
+                      aria-label={`Remove ${skill}`}
+                    >
+                      &times;
+                    </button>
+                  </span>
+                ))}
+              </div>
+            )}
           </div>
 
           <div className="space-y-1.5">

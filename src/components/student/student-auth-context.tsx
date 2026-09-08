@@ -35,7 +35,7 @@ interface StudentAuthContextType {
     name: string,
     email: string,
     password?: string,
-    headline?: string,
+    skillsOrHeadline?: string[] | string,
     college?: string
   ) => Promise<boolean>;
   logout: () => Promise<void>;
@@ -117,19 +117,29 @@ export function StudentAuthProvider({
       name: string,
       email: string,
       password?: string,
-      headline?: string,
+      skillsOrHeadline?: string[] | string,
       college?: string
     ): Promise<boolean> => {
       const cleanEmail = email.trim().toLowerCase();
       const effectivePassword = password || "Student123!";
+
+      let skills: string[] = [];
+      let headline: string | undefined = undefined;
+
+      if (Array.isArray(skillsOrHeadline)) {
+        skills = skillsOrHeadline;
+      } else if (typeof skillsOrHeadline === "string") {
+        headline = skillsOrHeadline.trim();
+      }
 
       const data = await apiClient.post<{ user: any }>("/api/auth/signup", {
         name: name.trim(),
         email: cleanEmail,
         password: effectivePassword,
         role: "STUDENT",
-        headline: headline?.trim(),
+        headline,
         college: college?.trim(),
+        skills,
       });
 
       if (data?.user) {

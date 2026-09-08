@@ -82,18 +82,55 @@ export async function POST(req: NextRequest) {
       });
 
       if (role === UserRole.STUDENT) {
+        const rawSkills: string[] = Array.from(
+          new Set(
+            Array.isArray(body.skills)
+              ? body.skills.map((s: any) => String(s).trim()).filter(Boolean)
+              : typeof body.skills === "string"
+                ? body.skills.split(",").map((s: string) => s.trim()).filter(Boolean)
+                : []
+          )
+        );
+
+        const primaryExpertise =
+          rawSkills.length > 0
+            ? rawSkills.join(", ")
+            : body.expertise?.trim() || "Web Development";
+
+        const studentHeadline =
+          body.headline?.trim() ||
+          (rawSkills.length > 0 ? `${rawSkills[0]} Builder` : "Student Freelancer");
+
         const studentProfile = await tx.studentProfile.create({
           data: {
             userId: user.id,
-            headline: body.headline?.trim() || "Student Freelancer",
+            headline: studentHeadline,
             college: body.college?.trim() || null,
             location: body.location?.trim() || null,
-            expertise: body.expertise?.trim() || "Web Development",
+            expertise: primaryExpertise,
             experienceLevel: body.experienceLevel?.trim() || "Beginner",
             availability: body.availability?.trim() || "Available Now",
             hourlyRate: body.hourlyRate?.trim() || null,
           },
         });
+
+        // Persist student skills in relational database for project matching
+        if (rawSkills.length > 0) {
+          for (const skillName of rawSkills) {
+            const skill = await tx.skill.upsert({
+              where: { name: skillName },
+              update: {},
+              create: { name: skillName },
+            });
+            await tx.studentSkill.create({
+              data: {
+                studentId: studentProfile.id,
+                skillId: skill.id,
+              },
+            });
+          }
+        }
+
         return { ...user, studentProfile, clientProfile: null };
       } else {
         const clientProfile = await tx.clientProfile.create({
