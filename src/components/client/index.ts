@@ -17,3 +17,5 @@ export * from "./client-project-detail-client";
 export * from "./client-project-applicants-client";
 export * from "./hired-students-list";
 export * from "./client-messages-view";
+export * from "./client-payments-view";
+export * from "./client-settings-view";
