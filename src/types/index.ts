@@ -315,6 +315,8 @@ export interface MessageAttachment {
   id: string;
   name: string;
   size?: string;
+  url?: string;
+  fileId?: string;
 }
 
 export interface Message {
@@ -343,4 +345,133 @@ export interface Conversation {
   unreadCount: number;
   clientStatus: ConversationStatus;
   clientStatusText?: string;
+  project?: {
+    id: string;
+    title: string;
+    description: string;
+    budget: string;
+    deadline?: string | null;
+    skills?: any[];
+    status?: string;
+  };
+  workContract?: {
+    id: string;
+    status: string;
+    progress: number;
+  } | null;
 }
+
+// ─── Payment & Escrow Types ───────────────────────────────────────────────────
+
+export type PaymentStatus =
+  | "PENDING"
+  | "PROCESSING"
+  | "SUCCEEDED"
+  | "FAILED"
+  | "CANCELLED"
+  | "REFUNDED";
+
+export type EscrowStatus =
+  | "HELD"
+  | "RELEASED"
+  | "REFUNDED"
+  | "CANCELLED";
+
+export type TransactionType =
+  | "PAYMENT"
+  | "ESCROW_HOLD"
+  | "ESCROW_RELEASE"
+  | "REFUND"
+  | "PLATFORM_FEE"
+  | "EARNING";
+
+export interface Payment {
+  id: string;
+  clientId: string;
+  studentId: string;
+  projectId: string;
+  workContractId: string;
+  amount: number | string;
+  currency: string;
+  status: PaymentStatus;
+  provider: string;
+  providerPaymentId?: string | null;
+  createdAt: string;
+  updatedAt: string;
+  escrow?: Escrow | null;
+  project?: {
+    id: string;
+    title: string;
+  };
+  student?: {
+    id: string;
+    user?: {
+      name: string;
+      email: string;
+      avatar?: string | null;
+    };
+  };
+}
+
+export interface Escrow {
+  id: string;
+  paymentId: string;
+  workContractId: string;
+  amount: number | string;
+  currency: string;
+  status: EscrowStatus;
+  heldAt: string;
+  releasedAt?: string | null;
+  refundedAt?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface StudentWallet {
+  id: string;
+  studentId: string;
+  availableBalance: number | string;
+  pendingBalance: number | string;
+  totalEarned: number | string;
+  currency: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface PaymentTransaction {
+  id: string;
+  paymentId?: string | null;
+  userId: string;
+  type: TransactionType;
+  amount: number | string;
+  currency: string;
+  description: string;
+  createdAt: string;
+}
+
+export interface StudentEarningsData {
+  wallet: {
+    availableBalance: string;
+    pendingBalance: string;
+    totalEarned: string;
+    currency: string;
+  };
+  transactions: Array<{
+    id: string;
+    type: TransactionType;
+    amount: string;
+    currency: string;
+    description: string;
+    createdAt: string;
+  }>;
+  escrows: Array<{
+    id: string;
+    workContractId: string;
+    projectTitle: string;
+    amount: string;
+    currency: string;
+    status: EscrowStatus;
+    heldAt: string;
+  }>;
+}
+

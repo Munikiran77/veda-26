@@ -21,6 +21,12 @@ type WorkWithProject = WorkProject & { project: Project };
 export default function MyWorkPage() {
   const [activeTab, setActiveTab] = useState<WorkTab>("All");
   const [searchQuery, setSearchQuery] = useState("");
+  const [earnings, setEarnings] = useState<{
+    availableBalance: string;
+    pendingBalance: string;
+    totalEarned: string;
+    currency: string;
+  } | null>(null);
   const [sortOption, setSortOption] = useState<SortOption>("Newest");
   const [allWork, setAllWork] = useState<WorkWithProject[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -32,9 +38,15 @@ export default function MyWorkPage() {
       try {
         setIsLoading(true);
         setError(null);
-        const data = await apiClient.get<any[]>("/api/work");
+        const [data, earningsRes] = await Promise.all([
+          apiClient.get<any[]>("/api/work"),
+          apiClient.get<any>("/api/student/earnings").catch(() => null),
+        ]);
         if (isMounted && Array.isArray(data)) {
           setAllWork(data.map((item) => mapWorkContract(item)));
+        }
+        if (isMounted && earningsRes?.wallet) {
+          setEarnings(earningsRes.wallet);
         }
       } catch (err: any) {
         if (isMounted) {
@@ -173,22 +185,34 @@ export default function MyWorkPage() {
               {/* Earnings Overview Card */}
               <div className="rounded-2xl border border-[var(--color-border-subtle)] bg-white p-6 shadow-sm">
                 <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-sm font-bold text-[var(--color-text-primary)]">Earnings Overview</h3>
-                  <span className="inline-flex items-center rounded-full bg-amber-50 border border-amber-200/60 px-2 py-0.5 text-[10px] font-semibold text-amber-800">
-                    Deferred
+                  <h3 className="text-sm font-bold text-[var(--color-text-primary)]">Earnings &amp; Escrow</h3>
+                  <span className="inline-flex items-center rounded-full bg-emerald-50 border border-emerald-200/60 px-2 py-0.5 text-[10px] font-semibold text-emerald-800">
+                    Demo Escrow
                   </span>
                 </div>
                 <div className="space-y-3">
                   <div>
-                    <p className="text-xs font-medium text-[var(--color-text-secondary)]">Total Earned</p>
-                    <p className="text-2xl font-bold text-[var(--color-text-primary)]">—</p>
+                    <p className="text-xs font-medium text-[var(--color-text-secondary)]">Available Balance</p>
+                    <p className="text-2xl font-bold text-[var(--color-text-primary)]">
+                      ${earnings ? parseFloat(earnings.availableBalance).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "0.00"}
+                    </p>
                   </div>
-                  <div>
-                    <p className="text-xs font-medium text-[var(--color-text-secondary)]">Pending Clearance</p>
-                    <p className="text-lg font-bold text-[var(--color-text-primary)]">—</p>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-xs font-medium text-[var(--color-text-secondary)]">In Escrow (Pending)</p>
+                      <p className="text-sm font-semibold text-amber-600">
+                        ${earnings ? parseFloat(earnings.pendingBalance).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "0.00"}
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-xs font-medium text-[var(--color-text-secondary)]">Total Cleared</p>
+                      <p className="text-sm font-semibold text-emerald-600">
+                        ${earnings ? parseFloat(earnings.totalEarned).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "0.00"}
+                      </p>
+                    </div>
                   </div>
                   <p className="text-[11px] text-[var(--color-text-tertiary)] leading-relaxed pt-1">
-                    Financial ledger &amp; payout escrow integration will be enabled in a future release.
+                    Demo Payment — No real money is charged. Demo Escrow — No real funds are held.
                   </p>
                 </div>
               </div>

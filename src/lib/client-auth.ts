@@ -8,6 +8,12 @@ export interface ClientUser {
   createdAt: string;
 }
 
+/**
+ * DEPRECATED PROTOTYPE STORAGE HELPERS
+ * Note: SkillBridge uses server-backed HttpOnly JWT cookies (`sb_session`) as the
+ * authoritative source of truth. These functions are retained only for backward
+ * compatibility and are not used by the production authentication flow.
+ */
 export const CLIENT_AUTH_STORAGE_KEY = "skillbridge_client_auth_session";
 export const CLIENT_AUTH_COOKIE_NAME = "sb_client_session";
 

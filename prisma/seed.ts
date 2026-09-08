@@ -624,6 +624,137 @@ async function main() {
     }
   }
 
+  // 9. Seed Conversations & Messages
+  const conversationsData = [
+    {
+      id: "conv-1",
+      studentId: studentProfile.id,
+      clientId: clientProfile.id,
+      projectId: "1",
+      messages: [
+        {
+          id: "msg-1",
+          senderId: clientUser.id,
+          content: "Hi Alex! The dashboard is looking really good. Could you make the revenue chart slightly easier to read on mobile devices?",
+          readAt: new Date(Date.now() - 4 * 3600 * 1000),
+          createdAt: new Date(Date.now() - 5 * 3600 * 1000),
+        },
+        {
+          id: "msg-2",
+          senderId: studentUser.id,
+          content: "Sure, I'll adjust the chart layout and test it on smaller screens. Should take a couple of hours.",
+          readAt: new Date(Date.now() - 3 * 3600 * 1000),
+          createdAt: new Date(Date.now() - 4 * 3600 * 1000),
+        },
+        {
+          id: "msg-3",
+          senderId: clientUser.id,
+          content: "Perfect. Also, please make sure the tooltip doesn't overflow on mobile — it was cutting off on the right side.",
+          readAt: new Date(Date.now() - 2 * 3600 * 1000),
+          createdAt: new Date(Date.now() - 3 * 3600 * 1000),
+        },
+        {
+          id: "msg-4",
+          senderId: studentUser.id,
+          content: "Got it. I'll fix the tooltip overflow and add a media query for mobile. I'll push an update by end of day.",
+          readAt: new Date(Date.now() - 1 * 3600 * 1000),
+          createdAt: new Date(Date.now() - 2 * 3600 * 1000),
+        },
+        {
+          id: "msg-5",
+          senderId: studentUser.id,
+          content: "Here's the updated build with both fixes applied.",
+          attachmentName: "dashboard-v3.zip",
+          attachmentSize: "2.4 MB",
+          readAt: new Date(Date.now() - 30 * 60 * 1000),
+          createdAt: new Date(Date.now() - 1 * 3600 * 1000),
+        },
+        {
+          id: "msg-6",
+          senderId: clientUser.id,
+          content: "Can you share the latest dashboard build?",
+          readAt: null, // Unread by student
+          createdAt: new Date(Date.now() - 15 * 60 * 1000),
+        },
+        {
+          id: "msg-7",
+          senderId: clientUser.id,
+          content: "Also want to double-check the KPI cards — are they responsive on tablets too?",
+          readAt: null, // Unread by student
+          createdAt: new Date(Date.now() - 10 * 60 * 1000),
+        },
+      ],
+    },
+    {
+      id: "conv-2",
+      studentId: studentProfile.id,
+      clientId: clientProfile.id,
+      projectId: "5",
+      messages: [
+        {
+          id: "msg-8",
+          senderId: clientUser.id,
+          content: "Alex, the chatbot integration is coming along well. Can you check the API fallback and make sure it handles edge cases gracefully?",
+          readAt: new Date(Date.now() - 24 * 3600 * 1000),
+          createdAt: new Date(Date.now() - 25 * 3600 * 1000),
+        },
+        {
+          id: "msg-9",
+          senderId: studentUser.id,
+          content: "Yes, I'll add a fallback response for undefined intents and test the edge cases today.",
+          readAt: new Date(Date.now() - 20 * 3600 * 1000),
+          createdAt: new Date(Date.now() - 23 * 3600 * 1000),
+        },
+        {
+          id: "msg-10",
+          senderId: clientUser.id,
+          content: "Great. Also ensure setup instructions are included in the final documentation.",
+          readAt: new Date(Date.now() - 18 * 3600 * 1000),
+          createdAt: new Date(Date.now() - 19 * 3600 * 1000),
+        },
+      ],
+    },
+  ];
+
+  for (const c of conversationsData) {
+    const conversation = await prisma.conversation.upsert({
+      where: {
+        studentId_clientId_projectId: {
+          studentId: c.studentId,
+          clientId: c.clientId,
+          projectId: c.projectId,
+        },
+      },
+      update: {},
+      create: {
+        id: c.id,
+        studentId: c.studentId,
+        clientId: c.clientId,
+        projectId: c.projectId,
+      },
+    });
+
+    for (const m of c.messages) {
+      await prisma.message.upsert({
+        where: { id: m.id },
+        update: {
+          content: m.content,
+          readAt: m.readAt,
+        },
+        create: {
+          id: m.id,
+          conversationId: conversation.id,
+          senderId: m.senderId,
+          content: m.content,
+          attachmentName: m.attachmentName,
+          attachmentSize: m.attachmentSize,
+          readAt: m.readAt,
+          createdAt: m.createdAt,
+        },
+      });
+    }
+  }
+
   console.log("✅ SkillBridge database seed completed successfully.");
 }
 

@@ -15,10 +15,23 @@ interface ProjectContextProps {
 }
 
 export function ProjectContext({ conversation, isOpen, onClose }: ProjectContextProps) {
-  const project = allProjects.find((p) => p.id === conversation.projectId);
-  const work = allWorkProjects.find((w) => w.projectId === conversation.projectId);
+  const fallbackProject = allProjects.find((p) => p.id === conversation.projectId);
+  const fallbackWork = allWorkProjects.find((w) => w.projectId === conversation.projectId);
 
-  if (!project) return null;
+  const title = conversation.project?.title || fallbackProject?.title || conversation.projectTitle;
+  const description = conversation.project?.description || fallbackProject?.description || "";
+  const budget = conversation.project?.budget || fallbackProject?.budget || "₹0";
+  const deadline = conversation.project?.deadline || fallbackProject?.deadline || "TBD";
+  const clientName = conversation.client;
+
+  const rawSkills = conversation.project?.skills || fallbackProject?.skills || [];
+  const skills: string[] = rawSkills.map((s: any) => typeof s === "string" ? s : s?.skill?.name || "").filter(Boolean);
+
+  const work = conversation.workContract || (fallbackWork ? {
+    id: fallbackWork.id,
+    status: fallbackWork.status,
+    progress: fallbackWork.progress,
+  } : null);
 
   const content = (
     <div className="flex flex-col h-full overflow-y-auto bg-white">
@@ -38,10 +51,10 @@ export function ProjectContext({ conversation, isOpen, onClose }: ProjectContext
         <div>
           <p className="mb-1 text-[10px] font-bold uppercase tracking-wider text-[var(--color-text-secondary)]">Project</p>
           <h4 className="text-base font-bold text-[var(--color-text-primary)] leading-snug">
-            {project.title}
+            {title}
           </h4>
           <p className="mt-1 text-xs text-[var(--color-text-secondary)]">
-            Client: <span className="font-semibold text-[var(--color-text-primary)]">{project.client}</span>
+            Client: <span className="font-semibold text-[var(--color-text-primary)]">{clientName}</span>
           </p>
         </div>
 
@@ -49,12 +62,12 @@ export function ProjectContext({ conversation, isOpen, onClose }: ProjectContext
         <div className="flex flex-col gap-3">
           <div className="flex items-center gap-2 text-sm">
             <IndianRupee size={14} className="text-gray-400" />
-            <span className="font-semibold text-[var(--color-text-primary)]">{project.budget}</span>
+            <span className="font-semibold text-[var(--color-text-primary)]">{budget}</span>
           </div>
           <div className="flex items-center gap-2 text-sm">
             <Clock size={14} className="text-gray-400" />
             <span className="text-[var(--color-text-secondary)]">
-              Deadline: <span className="font-medium text-[var(--color-text-primary)]">{project.deadline || "TBD"}</span>
+              Deadline: <span className="font-medium text-[var(--color-text-primary)]">{deadline}</span>
             </span>
           </div>
         </div>
@@ -65,11 +78,11 @@ export function ProjectContext({ conversation, isOpen, onClose }: ProjectContext
             <div className="mb-2 flex items-center justify-between text-xs">
               <span className="font-semibold text-[var(--color-text-primary)]">Status</span>
               <span className={`rounded-full border px-2 py-0.5 text-xs font-semibold ${
-                work.status === "In Progress" ? "bg-blue-50 text-blue-700 border-blue-100"
-                : work.status === "Awaiting Review" ? "bg-purple-50 text-purple-700 border-purple-100"
+                work.status === "IN_PROGRESS" || work.status === "In Progress" ? "bg-blue-50 text-blue-700 border-blue-100"
+                : work.status === "AWAITING_REVIEW" || work.status === "Awaiting Review" ? "bg-purple-50 text-purple-700 border-purple-100"
                 : "bg-emerald-50 text-emerald-700 border-emerald-100"
               }`}>
-                {work.status}
+                {work.status === "IN_PROGRESS" ? "In Progress" : work.status === "AWAITING_REVIEW" ? "Awaiting Review" : work.status === "COMPLETED" ? "Completed" : work.status}
               </span>
             </div>
             <WorkProjectProgress progress={work.progress} />
@@ -77,24 +90,28 @@ export function ProjectContext({ conversation, isOpen, onClose }: ProjectContext
         )}
 
         {/* Project Context */}
-        <div>
-          <p className="mb-2 text-[10px] font-bold uppercase tracking-wider text-[var(--color-text-secondary)]">Project Context</p>
-          <p className="text-xs text-[var(--color-text-secondary)] leading-relaxed">
-            {project.description}
-          </p>
-        </div>
+        {description && (
+          <div>
+            <p className="mb-2 text-[10px] font-bold uppercase tracking-wider text-[var(--color-text-secondary)]">Project Context</p>
+            <p className="text-xs text-[var(--color-text-secondary)] leading-relaxed">
+              {description}
+            </p>
+          </div>
+        )}
 
         {/* Skills */}
-        <div>
-          <p className="mb-2 text-[10px] font-bold uppercase tracking-wider text-[var(--color-text-secondary)]">Skills</p>
-          <div className="flex flex-wrap gap-1.5">
-            {project.skills.map((skill) => (
-              <span key={skill} className="rounded-md bg-[var(--color-canvas-surface)] px-2.5 py-1 text-xs font-medium text-[var(--color-text-primary)] border border-[var(--color-border-subtle)]">
-                {skill}
-              </span>
-            ))}
+        {skills.length > 0 && (
+          <div>
+            <p className="mb-2 text-[10px] font-bold uppercase tracking-wider text-[var(--color-text-secondary)]">Skills</p>
+            <div className="flex flex-wrap gap-1.5">
+              {skills.map((skill) => (
+                <span key={skill} className="rounded-md bg-[var(--color-canvas-surface)] px-2.5 py-1 text-xs font-medium text-[var(--color-text-primary)] border border-[var(--color-border-subtle)]">
+                  {skill}
+                </span>
+              ))}
+            </div>
           </div>
-        </div>
+        )}
 
         {/* CTA */}
         {work && (
@@ -108,7 +125,7 @@ export function ProjectContext({ conversation, isOpen, onClose }: ProjectContext
         )}
         {!work && (
           <Link
-            href={`/student/projects/${project.id}`}
+            href={`/student/projects/${conversation.projectId}`}
             className="group flex items-center justify-center gap-1.5 rounded-xl border border-[var(--color-border-subtle)] bg-white px-4 py-2.5 text-sm font-semibold text-[var(--color-text-primary)] hover:bg-[var(--color-canvas-surface)] transition-colors"
           >
             View Project

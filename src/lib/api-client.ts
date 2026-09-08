@@ -89,4 +89,11 @@ export const apiClient = {
   delete: <T>(url: string) => {
     return apiRequest<T>(url, { method: "DELETE" });
   },
+
+  upload: <T>(url: string, formData: FormData) => {
+    return apiRequest<T>(url, {
+      method: "POST",
+      body: formData,
+    });
+  },
 };

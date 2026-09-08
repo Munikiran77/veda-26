@@ -91,7 +91,7 @@ export function ClientAuthProvider({
       password?: string
     ): Promise<boolean> => {
       const cleanEmail = email.trim().toLowerCase();
-      const effectivePassword = password || "Client123!";
+      const effectivePassword = password || "";
 
       const data = await apiClient.post<{ user: any }>("/api/auth/login", {
         email: cleanEmail,

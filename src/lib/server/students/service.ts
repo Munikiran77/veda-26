@@ -8,6 +8,8 @@ export interface ListStudentsQuery {
   expertise?: string;
   experience?: string;
   availability?: string;
+  limit?: number;
+  offset?: number;
 }
 
 export interface UpdateStudentInput {
@@ -125,6 +127,8 @@ export async function listStudents(query: ListStudentsQuery = {}) {
 
   const students = await prisma.studentProfile.findMany({
     where,
+    take: Math.min(query.limit || 50, 100),
+    skip: query.offset || 0,
     include: {
       user: {
         select: {

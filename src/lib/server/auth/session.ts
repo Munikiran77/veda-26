@@ -39,7 +39,9 @@ export async function createSessionToken(payload: SessionPayload): Promise<strin
 export async function verifySessionToken(token: string): Promise<SessionPayload | null> {
   try {
     const secretKey = getSecretKey();
-    const { payload } = await jwtVerify(token, secretKey);
+    const { payload } = await jwtVerify(token, secretKey, {
+      algorithms: ["HS256"],
+    });
     return {
       userId: payload.userId as string,
       email: payload.email as string,
@@ -95,5 +97,6 @@ export function clearSessionCookie(response: NextResponse) {
     sameSite: "lax",
     path: "/",
     maxAge: 0,
+    expires: new Date(0),
   });
 }

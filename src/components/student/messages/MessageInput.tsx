@@ -6,21 +6,31 @@ import { cn } from "@/lib/utils";
 import type { MessageAttachment } from "@/types";
 
 interface MessageInputProps {
-  onSend: (content: string, attachment?: MessageAttachment) => void;
+  onSend: (content: string, attachment?: MessageAttachment) => Promise<boolean | void> | void;
+  disabled?: boolean;
 }
 
-export function MessageInput({ onSend }: MessageInputProps) {
+export function MessageInput({ onSend, disabled }: MessageInputProps) {
   const [text, setText] = useState("");
   const [attachment, setAttachment] = useState<MessageAttachment | null>(null);
+  const [isSending, setIsSending] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const handleSend = () => {
+  const handleSend = async () => {
     const trimmed = text.trim();
     if (!trimmed && !attachment) return;
+    if (disabled || isSending) return;
 
-    onSend(trimmed, attachment || undefined);
-    setText("");
-    setAttachment(null);
+    setIsSending(true);
+    try {
+      const result = await onSend(trimmed, attachment || undefined);
+      if (result !== false) {
+        setText("");
+        setAttachment(null);
+      }
+    } finally {
+      setIsSending(false);
+    }
   };
 
   const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
@@ -41,7 +51,7 @@ export function MessageInput({ onSend }: MessageInputProps) {
     e.target.value = "";
   };
 
-  const canSend = text.trim().length > 0 || !!attachment;
+  const canSend = (text.trim().length > 0 || !!attachment) && !disabled && !isSending;
 
   return (
     <div className="flex-shrink-0 border-t border-[var(--color-border-subtle)] bg-white p-4 sm:px-6">

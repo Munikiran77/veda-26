@@ -69,41 +69,44 @@ export async function getCurrentUser(req: Request): Promise<AuthenticatedUser | 
     }
   }
 
-  // 2. Automated Test Runner Isolation:
-  // ONLY enabled when NODE_ENV === "test" AND validated with internal test secret.
-  // Browser headers cannot bypass authentication in production or standard development.
-  const isTestEnv = process.env.NODE_ENV === "test";
-  const testSecretHeader = req.headers.get("x-skillbridge-test-auth");
-  const authSecret = process.env.AUTH_SECRET || "skillbridge_development_super_secure_jwt_session_secret_2026_key";
+  // 2. Security Defense: Legacy authentication headers (x-user-id, x-user-role, x-user-email)
+  // are categorically rejected and never trusted under any circumstances.
+  
+  // 3. Automated Test Runner Isolation:
+  // Strictly disabled in production. Gated exclusively to NODE_ENV === "test" with internal secret.
+  if (process.env.NODE_ENV !== "production" && process.env.NODE_ENV === "test") {
+    const testSecretHeader = req.headers.get("x-skillbridge-test-auth");
+    const authSecret = process.env.AUTH_SECRET;
 
-  if (isTestEnv && testSecretHeader === authSecret) {
-    const testEmail = req.headers.get("x-test-user-email");
-    const testId = req.headers.get("x-test-user-id");
+    if (authSecret && testSecretHeader === authSecret) {
+      const testEmail = req.headers.get("x-test-user-email");
+      const testId = req.headers.get("x-test-user-id");
 
-    if (testEmail || testId) {
-      const user = await prisma.user.findFirst({
-        where: testEmail
-          ? { email: testEmail }
-          : {
-              OR: [
-                { id: testId! },
-                { studentProfile: { id: testId! } },
-                { clientProfile: { id: testId! } },
-              ],
-            },
-        include: {
-          studentProfile: true,
-          clientProfile: true,
-        },
-      });
+      if (testEmail || testId) {
+        const user = await prisma.user.findFirst({
+          where: testEmail
+            ? { email: testEmail }
+            : {
+                OR: [
+                  { id: testId! },
+                  { studentProfile: { id: testId! } },
+                  { clientProfile: { id: testId! } },
+                ],
+              },
+          include: {
+            studentProfile: true,
+            clientProfile: true,
+          },
+        });
 
-      if (user) {
-        return {
-          user,
-          role: user.role,
-          studentProfile: user.studentProfile,
-          clientProfile: user.clientProfile,
-        };
+        if (user) {
+          return {
+            user,
+            role: user.role,
+            studentProfile: user.studentProfile,
+            clientProfile: user.clientProfile,
+          };
+        }
       }
     }
   }

@@ -11,6 +11,8 @@ export async function GET(req: NextRequest) {
     const availability = searchParams.get("availability") || undefined;
     const skillsParam = searchParams.get("skills") || searchParams.get("skill");
     const skills = skillsParam ? skillsParam.split(",").map((s) => s.trim()) : undefined;
+    const limit = searchParams.get("limit") ? parseInt(searchParams.get("limit")!, 10) : undefined;
+    const offset = searchParams.get("offset") ? parseInt(searchParams.get("offset")!, 10) : undefined;
 
     const students = await listStudents({
       search,
@@ -18,6 +20,8 @@ export async function GET(req: NextRequest) {
       experience,
       availability,
       skills,
+      limit,
+      offset,
     });
 
     return apiSuccess(students);

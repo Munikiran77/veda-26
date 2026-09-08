@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
-import { MessageSquare } from "lucide-react";
+import { AlertCircle, Loader2, MessageSquare, RefreshCw } from "lucide-react";
 import { StudentLayout } from "@/components/student/StudentLayout";
 import {
   ConversationList,
@@ -11,106 +11,263 @@ import {
   MessageInput,
   ProjectContext,
 } from "@/components/student/messages";
-import { mockConversations, mockMessages } from "@/data/messages";
+import { apiClient, ApiClientError } from "@/lib/api-client";
 import type { Conversation, Message, MessageAttachment } from "@/types";
 
 export default function MessagesPage() {
-  const [conversations, setConversations] = useState<Conversation[]>(mockConversations);
-  const [messages, setMessages] = useState<Record<string, Message[]>>(mockMessages);
+  const [conversations, setConversations] = useState<Conversation[]>([]);
+  const [loadingConversations, setLoadingConversations] = useState(true);
+  const [conversationsError, setConversationsError] = useState<string | null>(null);
+
   const [activeConvId, setActiveConvId] = useState<string | null>(null);
+  const [activeConvDetail, setActiveConvDetail] = useState<Conversation | null>(null);
+  const [messages, setMessages] = useState<Record<string, Message[]>>({});
+  const [loadingMessages, setLoadingMessages] = useState(false);
+  const [messagesError, setMessagesError] = useState<string | null>(null);
+
   const [searchQuery, setSearchQuery] = useState("");
   const [showDetails, setShowDetails] = useState(false);
-
-  // On mobile: whether we're showing the chat pane (vs the list)
   const [showChat, setShowChat] = useState(false);
+  const [isSending, setIsSending] = useState(false);
 
-  const activeConversation = conversations.find((c) => c.id === activeConvId) ?? null;
-  const activeMessages = activeConvId ? (messages[activeConvId] ?? []) : [];
-
-  const handleSelectConversation = useCallback((id: string) => {
-    setActiveConvId(id);
-    setShowChat(true);
-    setShowDetails(false);
-    // Mark as read
-    setConversations((prev) =>
-      prev.map((c) => (c.id === id ? { ...c, unreadCount: 0 } : c))
-    );
+  // 1. Fetch all conversations for the authenticated student
+  const fetchConversations = useCallback(async (silent = false) => {
+    if (!silent) setLoadingConversations(true);
+    try {
+      setConversationsError(null);
+      const data = await apiClient.get<Conversation[]>("/api/conversations");
+      setConversations(data);
+    } catch (err: any) {
+      if (!silent) {
+        setConversationsError(err?.message || "Failed to load conversations");
+      }
+    } finally {
+      if (!silent) setLoadingConversations(false);
+    }
   }, []);
+
+  useEffect(() => {
+    fetchConversations();
+  }, [fetchConversations]);
+
+  // 2. Fetch messages for the active conversation
+  const fetchMessages = useCallback(async (convId: string, silent = false) => {
+    if (!silent) setLoadingMessages(true);
+    try {
+      setMessagesError(null);
+      const [msgs, detail] = await Promise.all([
+        apiClient.get<Message[]>(`/api/conversations/${convId}/messages`),
+        apiClient.get<Conversation>(`/api/conversations/${convId}`).catch(() => null),
+      ]);
+
+      setMessages((prev) => ({
+        ...prev,
+        [convId]: msgs,
+      }));
+
+      if (detail) {
+        setActiveConvDetail(detail);
+      }
+    } catch (err: any) {
+      if (!silent) {
+        setMessagesError(err?.message || "Failed to load messages");
+      }
+    } finally {
+      if (!silent) setLoadingMessages(false);
+    }
+  }, []);
+
+  // 3. Mark conversation as read
+  const markAsRead = useCallback(async (convId: string) => {
+    try {
+      await apiClient.patch(`/api/conversations/${convId}/read`);
+      setConversations((prev) =>
+        prev.map((c) => (c.id === convId ? { ...c, unreadCount: 0 } : c))
+      );
+    } catch (err) {
+      // Non-critical, ignore silent failure
+    }
+  }, []);
+
+  // 4. Select a conversation
+  const handleSelectConversation = useCallback(
+    (id: string) => {
+      setActiveConvId(id);
+      setShowChat(true);
+      setShowDetails(false);
+      fetchMessages(id);
+      markAsRead(id);
+    },
+    [fetchMessages, markAsRead]
+  );
+
+  // 5. Polling for updates on active conversation (every 4 seconds)
+  useEffect(() => {
+    if (!activeConvId) return;
+
+    const interval = setInterval(() => {
+      fetchMessages(activeConvId, true);
+      fetchConversations(true);
+    }, 4000);
+
+    return () => clearInterval(interval);
+  }, [activeConvId, fetchMessages, fetchConversations]);
 
   const handleBack = useCallback(() => {
     setShowChat(false);
     setShowDetails(false);
   }, []);
 
+  // 6. Send message
   const handleSend = useCallback(
-    (content: string, attachment?: MessageAttachment) => {
-      if (!activeConvId) return;
+    async (content: string, attachment?: MessageAttachment): Promise<boolean> => {
+      if (!activeConvId) return false;
 
-      const now = new Date();
-      const timestamp = now.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+      setIsSending(true);
+      try {
+        const payload: any = { content };
+        if (attachment) {
+          payload.attachmentName = attachment.name;
+          payload.attachmentSize = attachment.size;
+          payload.attachmentUrl = attachment.id;
+        }
 
-      const newMessage: Message = {
-        id: `msg_${Date.now()}`,
-        conversationId: activeConvId,
-        sender: "student",
-        content,
-        timestamp,
-        status: "read",
-        attachment,
-      };
+        const createdMessage = await apiClient.post<Message>(
+          `/api/conversations/${activeConvId}/messages`,
+          payload
+        );
 
-      setMessages((prev) => ({
-        ...prev,
-        [activeConvId]: [...(prev[activeConvId] ?? []), newMessage],
-      }));
+        // Append returned database message to local state
+        setMessages((prev) => ({
+          ...prev,
+          [activeConvId]: [...(prev[activeConvId] ?? []), createdMessage],
+        }));
 
-      setConversations((prev) =>
-        prev.map((c) =>
-          c.id === activeConvId
-            ? { ...c, lastMessage: content || attachment?.name || "", lastMessageAt: "just now" }
-            : c
-        )
-      );
+        // Update preview in conversation list
+        setConversations((prev) =>
+          prev.map((c) =>
+            c.id === activeConvId
+              ? {
+                  ...c,
+                  lastMessage: content || attachment?.name || "",
+                  lastMessageAt: "just now",
+                }
+              : c
+          )
+        );
+
+        return true;
+      } catch (err: any) {
+        alert(err?.message || "Failed to send message. Please try again.");
+        return false;
+      } finally {
+        setIsSending(false);
+      }
     },
     [activeConvId]
   );
 
+  const activeConversation =
+    activeConvDetail || conversations.find((c) => c.id === activeConvId) || null;
+  const activeMessages = activeConvId ? (messages[activeConvId] ?? []) : [];
+
   return (
     <StudentLayout title="Messages" fullWidth noPadding>
       <div className="flex h-[calc(100vh-4rem)] overflow-hidden">
-
         {/* ── COLUMN 1: Conversation List ── */}
-        <div className={`
+        <div
+          className={`
           flex-shrink-0 w-full sm:w-72 md:w-80
           ${showChat ? "hidden lg:flex" : "flex"}
-          flex-col border-r border-[var(--color-border-subtle)]
-        `}>
-          <ConversationList
-            conversations={conversations}
-            activeId={activeConvId}
-            searchQuery={searchQuery}
-            onSearchChange={setSearchQuery}
-            onSelect={handleSelectConversation}
-          />
+          flex-col border-r border-[var(--color-border-subtle)] bg-white
+        `}
+        >
+          {loadingConversations ? (
+            <div className="flex flex-1 flex-col items-center justify-center p-8 text-center">
+              <Loader2 className="h-6 w-6 animate-spin text-blue-600 mb-2" />
+              <p className="text-xs text-[var(--color-text-secondary)]">Loading conversations...</p>
+            </div>
+          ) : conversationsError ? (
+            <div className="flex flex-1 flex-col items-center justify-center p-6 text-center">
+              <AlertCircle className="h-8 w-8 text-rose-500 mb-2" />
+              <p className="text-sm font-semibold text-[var(--color-text-primary)]">
+                Failed to load conversations
+              </p>
+              <p className="text-xs text-[var(--color-text-secondary)] mt-1 mb-4">
+                {conversationsError}
+              </p>
+              <button
+                onClick={() => fetchConversations()}
+                className="flex items-center gap-1.5 rounded-lg bg-blue-50 px-3 py-1.5 text-xs font-semibold text-blue-700 hover:bg-blue-100 transition-colors"
+              >
+                <RefreshCw size={12} /> Retry
+              </button>
+            </div>
+          ) : (
+            <ConversationList
+              conversations={conversations}
+              activeId={activeConvId}
+              searchQuery={searchQuery}
+              onSearchChange={setSearchQuery}
+              onSelect={handleSelectConversation}
+            />
+          )}
         </div>
 
         {/* ── COLUMN 2 + 3 area ── */}
-        <div className={`
+        <div
+          className={`
           flex flex-1 min-w-0
           ${showChat ? "flex" : "hidden lg:flex"}
-        `}>
+        `}
+        >
           {activeConversation ? (
             <>
               {/* Chat area */}
-              <div className="flex flex-1 min-w-0 flex-col">
+              <div className="flex flex-1 min-w-0 flex-col bg-white">
                 <ConversationHeader
                   conversation={activeConversation}
                   onBack={handleBack}
                   onToggleDetails={() => setShowDetails((v) => !v)}
                   showDetails={showDetails}
                 />
-                <MessageList messages={activeMessages} />
-                <MessageInput onSend={handleSend} />
+
+                {loadingMessages && activeMessages.length === 0 ? (
+                  <div className="flex flex-1 flex-col items-center justify-center p-8">
+                    <Loader2 className="h-6 w-6 animate-spin text-blue-600 mb-2" />
+                    <p className="text-xs text-[var(--color-text-secondary)]">Loading messages...</p>
+                  </div>
+                ) : messagesError && activeMessages.length === 0 ? (
+                  <div className="flex flex-1 flex-col items-center justify-center p-6 text-center">
+                    <AlertCircle className="h-8 w-8 text-rose-500 mb-2" />
+                    <p className="text-sm font-semibold text-[var(--color-text-primary)]">
+                      Failed to load messages
+                    </p>
+                    <p className="text-xs text-[var(--color-text-secondary)] mt-1 mb-4">
+                      {messagesError}
+                    </p>
+                    <button
+                      onClick={() => activeConvId && fetchMessages(activeConvId)}
+                      className="flex items-center gap-1.5 rounded-lg bg-blue-50 px-3 py-1.5 text-xs font-semibold text-blue-700 hover:bg-blue-100 transition-colors"
+                    >
+                      <RefreshCw size={12} /> Retry
+                    </button>
+                  </div>
+                ) : activeMessages.length === 0 ? (
+                  <div className="flex flex-1 flex-col items-center justify-center p-8 text-center">
+                    <MessageSquare size={32} className="text-gray-300 mb-2" />
+                    <p className="text-sm font-semibold text-[var(--color-text-primary)]">
+                      No messages yet
+                    </p>
+                    <p className="text-xs text-[var(--color-text-secondary)] max-w-xs mt-1">
+                      Send a message below to coordinate on this project with your client.
+                    </p>
+                  </div>
+                ) : (
+                  <MessageList messages={activeMessages} />
+                )}
+
+                <MessageInput onSend={handleSend} disabled={isSending} />
               </div>
 
               {/* Project Details Panel */}

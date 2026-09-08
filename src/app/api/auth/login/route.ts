@@ -3,9 +3,26 @@ import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 import { createSessionToken, setSessionCookie } from "@/lib/server/auth/session";
 import { apiError, apiSuccess } from "@/lib/server/api-response";
+import { checkCsrf } from "@/lib/server/security/csrf";
+import { getClientIp, rateLimiter, RATE_LIMITS } from "@/lib/server/security/rate-limit";
 
 export async function POST(req: NextRequest) {
   try {
+    // 1. CSRF Defense
+    const csrfResult = checkCsrf(req);
+    if (!csrfResult.valid) {
+      return apiError(csrfResult.message || "Cross-origin request blocked", 403, "CSRF_BLOCKED");
+    }
+
+    // 2. Rate Limiting (5 attempts / min / IP)
+    const ip = getClientIp(req);
+    const rateLimit = rateLimiter.check(`auth:login:${ip}`, RATE_LIMITS.AUTH);
+    if (!rateLimit.success) {
+      const errRes = apiError("Too many login attempts. Please try again later.", 429, "RATE_LIMIT_EXCEEDED");
+      errRes.headers.set("Retry-After", String(rateLimit.resetTime));
+      return errRes;
+    }
+
     const body = await req.json().catch(() => ({}));
     const email = body.email?.trim().toLowerCase();
     const password = body.password;

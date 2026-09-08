@@ -6,6 +6,8 @@ export interface ProjectQueryParams {
   category?: string;
   search?: string;
   clientId?: string;
+  limit?: number;
+  offset?: number;
 }
 
 export interface CreateProjectInput {
@@ -80,6 +82,8 @@ export async function listProjects(params: ProjectQueryParams = {}) {
 
   return prisma.project.findMany({
     where,
+    take: Math.min(params.limit || 50, 100),
+    skip: params.offset || 0,
     include: {
       client: {
         select: {

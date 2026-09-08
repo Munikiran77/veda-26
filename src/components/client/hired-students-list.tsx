@@ -17,60 +17,114 @@ interface HiredStudentViewItem {
   appliedAt?: string;
   skills: string[];
   studentProfileId?: string;
+  escrow?: {
+    id: string;
+    status: string;
+    amount: string | number;
+  } | null;
 }
 
 export function HiredStudentsList() {
   const [hiredList, setHiredList] = useState<HiredStudentViewItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [actionLoadingId, setActionLoadingId] = useState<string | null>(null);
+  const [actionMessage, setActionMessage] = useState<string | null>(null);
+
+  async function loadHired() {
+    try {
+      setIsLoading(true);
+      const [workData, escrowsData] = await Promise.all([
+        apiClient.get<any[]>("/api/work"),
+        apiClient.get<any[]>("/api/escrows").catch(() => []),
+      ]);
+
+      const escrowMap = new Map<string, any>();
+      if (Array.isArray(escrowsData)) {
+        for (const esc of escrowsData) {
+          if (esc.workContractId) {
+            escrowMap.set(esc.workContractId, esc);
+          }
+        }
+      }
+
+      if (Array.isArray(workData)) {
+        const items: HiredStudentViewItem[] = workData.map((contract) => {
+          const studentUser = contract.student?.user;
+          const studentName = studentUser?.name || "Student";
+          const avatarInitials = (studentUser?.name || "ST")
+            .split(" ")
+            .map((n: string) => n[0])
+            .join("")
+            .slice(0, 2)
+            .toUpperCase();
+
+          const skills = Array.isArray(contract.student?.skills)
+            ? contract.student.skills.map((s: any) => s.skill?.name || s.name || s)
+            : [];
+
+          const existingEscrow = escrowMap.get(contract.id) || null;
+
+          return {
+            id: contract.id,
+            studentName,
+            avatarInitials,
+            headline: contract.student?.headline || "Student Builder",
+            college: contract.student?.college || "University",
+            projectTitle: contract.project?.title || `Project #${contract.projectId}`,
+            projectStatus: formatPrismaProjectStatus(contract.project?.status),
+            proposal: contract.application?.proposal,
+            appliedAt: contract.application?.appliedAt,
+            skills,
+            studentProfileId: contract.student?.id,
+            escrow: existingEscrow
+              ? {
+                  id: existingEscrow.id,
+                  status: existingEscrow.status,
+                  amount: existingEscrow.amount,
+                }
+              : null,
+          };
+        });
+        setHiredList(items);
+      }
+    } catch (err) {
+      console.error("Failed to load hired students:", err);
+    } finally {
+      setIsLoading(false);
+    }
+  }
 
   useEffect(() => {
-    let isMounted = true;
-    async function loadHired() {
-      try {
-        setIsLoading(true);
-        const data = await apiClient.get<any[]>("/api/work");
-        if (isMounted && Array.isArray(data)) {
-          const items: HiredStudentViewItem[] = data.map((contract) => {
-            const studentUser = contract.student?.user;
-            const studentName = studentUser?.name || "Student";
-            const avatarInitials = (studentUser?.name || "ST")
-              .split(" ")
-              .map((n: string) => n[0])
-              .join("")
-              .slice(0, 2)
-              .toUpperCase();
-
-            const skills = Array.isArray(contract.student?.skills)
-              ? contract.student.skills.map((s: any) => s.skill?.name || s.name || s)
-              : [];
-
-            return {
-              id: contract.id,
-              studentName,
-              avatarInitials,
-              headline: contract.student?.headline || "Student Builder",
-              college: contract.student?.college || "University",
-              projectTitle: contract.project?.title || `Project #${contract.projectId}`,
-              projectStatus: formatPrismaProjectStatus(contract.project?.status),
-              proposal: contract.application?.proposal,
-              appliedAt: contract.application?.appliedAt,
-              skills,
-              studentProfileId: contract.student?.id,
-            };
-          });
-          setHiredList(items);
-        }
-      } catch (err) {
-        console.error("Failed to load hired students:", err);
-      } finally {
-        if (isMounted) setIsLoading(false);
-      }
-    }
     loadHired();
-    return () => {
-      isMounted = false;
-    };
   }, []);
+
+  async function handleFundEscrow(contractId: string) {
+    try {
+      setActionLoadingId(contractId);
+      setActionMessage(null);
+      await apiClient.post("/api/payments", { workContractId: contractId });
+      setActionMessage("Escrow successfully funded (Demo).");
+      await loadHired();
+    } catch (err: any) {
+      setActionMessage(`Funding failed: ${err.message || "Unknown error"}`);
+    } finally {
+      setActionLoadingId(null);
+    }
+  }
+
+  async function handleReleaseEscrow(escrowId: string) {
+    try {
+      setActionLoadingId(escrowId);
+      setActionMessage(null);
+      await apiClient.post(`/api/escrows/${escrowId}/release`);
+      setActionMessage("Escrow released to student wallet (Demo).");
+      await loadHired();
+    } catch (err: any) {
+      setActionMessage(`Release failed: ${err.message || "Unknown error"}`);
+    } finally {
+      setActionLoadingId(null);
+    }
+  }
 
   const totalHired = hiredList.length;
 
@@ -109,6 +163,19 @@ export function HiredStudentsList() {
         >
           View Projects
         </Link>
+      </div>
+
+      {/* Demo Escrow Notice */}
+      <div className="rounded-xl border border-blue-200/80 bg-blue-50/60 p-4 text-xs text-blue-800 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+        <div className="flex items-center gap-2">
+          <span className="font-bold uppercase tracking-wider text-[10px] bg-blue-100 text-blue-800 px-2 py-0.5 rounded-md">
+            Demo Payment
+          </span>
+          <span>Demo Payment — No real money is charged. Demo Escrow — No real funds are held.</span>
+        </div>
+        {actionMessage && (
+          <span className="font-semibold text-emerald-700">{actionMessage}</span>
+        )}
       </div>
 
       {/* Content */}
@@ -173,7 +240,37 @@ export function HiredStudentsList() {
                 </div>
 
                 {/* Actions */}
-                <div className="flex items-center gap-2 shrink-0">
+                <div className="flex items-center gap-2 shrink-0 flex-wrap">
+                  {/* Escrow Status & Action */}
+                  {!item.escrow ? (
+                    <button
+                      type="button"
+                      disabled={actionLoadingId === item.id}
+                      onClick={() => handleFundEscrow(item.id)}
+                      className="rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-emerald-700 disabled:opacity-50 transition-colors shadow-sm"
+                    >
+                      {actionLoadingId === item.id ? "Funding..." : "Fund Escrow (Demo)"}
+                    </button>
+                  ) : item.escrow.status === "HELD" ? (
+                    <div className="flex items-center gap-2">
+                      <span className="inline-flex items-center rounded-full bg-amber-50 px-2.5 py-1 text-xs font-medium text-amber-700 border border-amber-200">
+                        Escrow: ${parseFloat(String(item.escrow.amount)).toFixed(2)} (Held)
+                      </span>
+                      <button
+                        type="button"
+                        disabled={actionLoadingId === item.escrow.id}
+                        onClick={() => handleReleaseEscrow(item.escrow!.id)}
+                        className="rounded-lg bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-indigo-700 disabled:opacity-50 transition-colors shadow-sm"
+                      >
+                        {actionLoadingId === item.escrow.id ? "Releasing..." : "Release Escrow (Demo)"}
+                      </button>
+                    </div>
+                  ) : (
+                    <span className="inline-flex items-center rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-700 border border-emerald-200">
+                      Escrow Released (${parseFloat(String(item.escrow.amount)).toFixed(2)})
+                    </span>
+                  )}
+
                   <Link
                     href="/client/projects"
                     className="rounded-lg bg-[var(--color-text-primary)] px-3 py-1.5 text-xs font-semibold text-white hover:bg-black transition-colors"

@@ -42,16 +42,40 @@ export function MessageBubble({ message, index }: MessageBubbleProps) {
 
           {/* Attachment */}
           {message.attachment && (
-            <div className={cn(
-              "mt-2 flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-medium",
-              isStudent ? "bg-blue-700 text-blue-100" : "bg-white border border-[var(--color-border-subtle)] text-[var(--color-text-primary)]"
-            )}>
-              <Paperclip size={12} />
-              <span>{message.attachment.name}</span>
-              {message.attachment.size && (
-                <span className="opacity-70">· {message.attachment.size}</span>
-              )}
-            </div>
+            message.attachment.url ? (
+              <a
+                href={message.attachment.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={cn(
+                  "mt-2 flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-medium hover:underline transition-opacity hover:opacity-90",
+                  isStudent
+                    ? "bg-blue-700 text-blue-100"
+                    : "bg-white border border-[var(--color-border-subtle)] text-[var(--color-text-primary)]"
+                )}
+              >
+                <Paperclip size={12} />
+                <span>{message.attachment.name}</span>
+                {message.attachment.size && (
+                  <span className="opacity-70">· {message.attachment.size}</span>
+                )}
+              </a>
+            ) : (
+              <div
+                className={cn(
+                  "mt-2 flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-medium",
+                  isStudent
+                    ? "bg-blue-700 text-blue-100"
+                    : "bg-white border border-[var(--color-border-subtle)] text-[var(--color-text-primary)]"
+                )}
+              >
+                <Paperclip size={12} />
+                <span>{message.attachment.name}</span>
+                {message.attachment.size && (
+                  <span className="opacity-70">· {message.attachment.size}</span>
+                )}
+              </div>
+            )
           )}
         </div>
 

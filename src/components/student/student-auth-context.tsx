@@ -96,7 +96,7 @@ export function StudentAuthProvider({
   const login = useCallback(
     async (email: string, password?: string): Promise<boolean> => {
       const cleanEmail = email.trim().toLowerCase();
-      const effectivePassword = password || "Student123!";
+      const effectivePassword = password || "";
 
       const data = await apiClient.post<{ user: any }>("/api/auth/login", {
         email: cleanEmail,

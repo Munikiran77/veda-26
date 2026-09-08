@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { apiError, apiSuccess } from "@/lib/server/api-response";
 import { AuthError, requireClient } from "@/lib/server/auth/context";
 import { createProject, listProjects } from "@/lib/server/projects/service";
+import { checkCsrf } from "@/lib/server/security/csrf";
 
 export async function GET(req: NextRequest) {
   try {
@@ -10,8 +11,10 @@ export async function GET(req: NextRequest) {
     const category = searchParams.get("category") || undefined;
     const search = searchParams.get("search") || undefined;
     const clientId = searchParams.get("clientId") || undefined;
+    const limit = searchParams.get("limit") ? parseInt(searchParams.get("limit")!, 10) : undefined;
+    const offset = searchParams.get("offset") ? parseInt(searchParams.get("offset")!, 10) : undefined;
 
-    const projects = await listProjects({ status, category, search, clientId });
+    const projects = await listProjects({ status, category, search, clientId, limit, offset });
     return apiSuccess(projects);
   } catch (error: any) {
     console.error("GET /api/projects error:", error);
@@ -21,6 +24,12 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
+    // 1. CSRF Defense
+    const csrfResult = checkCsrf(req);
+    if (!csrfResult.valid) {
+      return apiError(csrfResult.message || "Cross-origin request blocked", 403, "CSRF_BLOCKED");
+    }
+
     // Only authenticated CLIENT users can create projects
     const auth = await requireClient(req);
 
