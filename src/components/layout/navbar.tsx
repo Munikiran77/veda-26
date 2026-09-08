@@ -14,8 +14,8 @@ export interface NavItem {
 }
 
 export const NAV_ITEMS: NavItem[] = [
-  { label: "Find Projects", href: "#projects" },
-  { label: "Find Talent", href: "#talent" },
+  { label: "Find Projects", href: "/student/projects" },
+  { label: "Find Talent", href: "/client/talent" },
   { label: "How It Works", href: "#how-it-works" },
   { label: "About", href: "#about" },
 ];
@@ -58,6 +58,11 @@ export function Navbar({ className }: NavbarProps) {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [isMobileMenuOpen]);
 
+  // Handle route change closing mobile menu
+  useEffect(() => {
+    setIsMobileMenuOpen(false);
+  }, [pathname]);
+
   // Lock body scroll when mobile menu is active
   useEffect(() => {
     if (isMobileMenuOpen) {
@@ -77,22 +82,21 @@ export function Navbar({ className }: NavbarProps) {
 
   return (
     <motion.header
-      initial={reduced ? false : { opacity: 0, y: -6 }}
+      initial={reduced ? false : { y: -20, opacity: 0 }}
       animate={
         isRevealed
-          ? { opacity: 1, y: 0 }
-          : { opacity: 0, y: reduced ? 0 : -6 }
+          ? { y: 0, opacity: 1 }
+          : { y: reduced ? 0 : -20, opacity: 0 }
       }
       transition={{
-        duration: reduced ? 0.35 : 0.6,
+        duration: reduced ? 0.35 : 0.65,
         ease: [0.22, 1, 0.36, 1],
       }}
       className={cn(
-        "sticky top-0 z-50 w-full transition-all duration-300 motion-reduce:transition-none",
-        "bg-[var(--color-canvas-bg)]/85 backdrop-blur-md supports-[backdrop-filter]:bg-[var(--color-canvas-bg)]/75",
+        "sticky top-0 z-40 w-full transition-all duration-300",
         isScrolled
-          ? "border-b border-[var(--color-border-subtle)] shadow-[0_2px_12px_rgba(0,0,0,0.03)]"
-          : "border-b border-transparent",
+          ? "bg-[var(--color-canvas-bg)]/85 backdrop-blur-md shadow-xs border-b border-[var(--color-border-subtle)]"
+          : "bg-[var(--color-canvas-bg)]/70 backdrop-blur-xs border-b border-transparent",
         className
       )}
     >
@@ -132,14 +136,14 @@ export function Navbar({ className }: NavbarProps) {
           {/* Right: Actions */}
           <div className="hidden md:flex items-center gap-3 lg:gap-4">
             <Link
-              href="#login"
+              href="/student/login"
               className="text-[14px] font-medium text-[var(--color-text-secondary)] transition-colors duration-200 hover:text-[var(--color-text-primary)] focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-[var(--color-accent)] focus-visible:ring-offset-2 rounded-full px-4 py-2 motion-safe:active:scale-[0.99]"
             >
               Log in
             </Link>
 
             <Link
-              href="#get-started"
+              href="/student/login"
               className="group inline-flex items-center gap-1.5 rounded-full bg-[var(--color-text-primary)] px-4.5 py-2 text-[14px] font-medium text-white shadow-xs transition-all duration-200 motion-reduce:transition-none hover:bg-black hover:shadow-md focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-[var(--color-accent)] focus-visible:ring-offset-2 motion-safe:active:scale-[0.98]"
             >
               <span>Get Started</span>
@@ -219,7 +223,7 @@ export function Navbar({ className }: NavbarProps) {
 
               <div className="flex flex-col gap-3">
                 <Link
-                  href="#login"
+                  href="/student/login"
                   onClick={closeMobileMenu}
                   className="flex h-12 w-full items-center justify-center rounded-full border border-[var(--color-border-subtle)] bg-white text-[15px] font-medium text-[var(--color-text-primary)] transition-colors hover:bg-[var(--color-canvas-surface)] motion-safe:active:scale-[0.99] focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-[var(--color-accent)]"
                 >
@@ -227,7 +231,7 @@ export function Navbar({ className }: NavbarProps) {
                 </Link>
 
                 <Link
-                  href="#get-started"
+                  href="/student/login"
                   onClick={closeMobileMenu}
                   className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-[var(--color-text-primary)] text-[15px] font-medium text-white shadow-xs transition-colors hover:bg-black motion-safe:active:scale-[0.99] focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-[var(--color-accent)]"
                 >

@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { motion } from "framer-motion";
 import { ArrowRight } from "lucide-react";
 
@@ -47,19 +48,19 @@ export function HeroCopy() {
         transition={{ duration: 0.6, delay: 0.6 }}
         className="flex flex-col gap-4 sm:flex-row sm:items-center w-full sm:w-auto"
       >
-        <a
-          href="#projects"
+        <Link
+          href="/student/projects"
           className="group flex items-center justify-center gap-2 rounded-full bg-[var(--color-text-primary)] px-8 py-3.5 text-sm font-medium text-[var(--color-canvas-bg)] hover:bg-[var(--color-text-secondary)] transition-colors w-full sm:w-auto"
         >
           Find Projects
           <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
-        </a>
-        <a
-          href="#talent"
+        </Link>
+        <Link
+          href="/client/talent"
           className="flex items-center justify-center rounded-full border border-[var(--color-border-subtle)] bg-transparent px-8 py-3.5 text-sm font-medium text-[var(--color-text-primary)] hover:bg-[var(--color-canvas-subtle)] transition-colors w-full sm:w-auto"
         >
           Hire Students
-        </a>
+        </Link>
       </motion.div>
     </div>
   );
