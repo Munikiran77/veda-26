@@ -13,19 +13,31 @@ interface ConversationListProps {
   searchQuery: string;
   onSearchChange: (v: string) => void;
   onSelect: (id: string) => void;
+  viewerRole?: "student" | "client";
 }
 
-export function ConversationList({ conversations, activeId, searchQuery, onSearchChange, onSelect }: ConversationListProps) {
+export function ConversationList({
+  conversations,
+  activeId,
+  searchQuery,
+  onSearchChange,
+  onSelect,
+  viewerRole = "student",
+}: ConversationListProps) {
+  const isClientViewer = viewerRole === "client";
+
   const filtered = useMemo(() => {
     if (!searchQuery.trim()) return conversations;
     const q = searchQuery.toLowerCase();
     return conversations.filter(
       (c) =>
-        c.client.toLowerCase().includes(q) ||
+        (isClientViewer
+          ? (c.studentName?.toLowerCase().includes(q) ?? false) || c.client.toLowerCase().includes(q)
+          : c.client.toLowerCase().includes(q)) ||
         c.projectTitle.toLowerCase().includes(q) ||
         c.lastMessage.toLowerCase().includes(q)
     );
-  }, [conversations, searchQuery]);
+  }, [conversations, searchQuery, isClientViewer]);
 
   return (
     <div className="flex h-full flex-col border-r border-[var(--color-border-subtle)] bg-white">
@@ -49,6 +61,19 @@ export function ConversationList({ conversations, activeId, searchQuery, onSearc
                 <p className="text-sm font-semibold text-[var(--color-text-primary)]">No conversations found</p>
                 <p className="text-xs text-[var(--color-text-secondary)] mt-1">Try a different search.</p>
               </>
+            ) : isClientViewer ? (
+              <>
+                <p className="text-sm font-semibold text-[var(--color-text-primary)]">No conversations yet</p>
+                <p className="text-xs text-[var(--color-text-secondary)] mt-1 mb-4">
+                  Once you start communicating with applicants or hired students, conversations will appear here.
+                </p>
+                <Link
+                  href="/client/projects"
+                  className="flex items-center gap-1.5 text-xs font-semibold text-blue-600 hover:text-blue-700"
+                >
+                  View Projects <ArrowRight size={12} />
+                </Link>
+              </>
             ) : (
               <>
                 <p className="text-sm font-semibold text-[var(--color-text-primary)]">No conversations yet</p>
@@ -71,6 +96,7 @@ export function ConversationList({ conversations, activeId, searchQuery, onSearc
               conversation={conv}
               isActive={conv.id === activeId}
               onClick={() => onSelect(conv.id)}
+              viewerRole={viewerRole}
             />
           ))
         )}

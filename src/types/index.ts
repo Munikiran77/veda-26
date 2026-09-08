@@ -324,6 +324,7 @@ export interface Message {
   conversationId: string;
   senderId?: string; // Links to User.id
   sender: MessageSender;
+  isSelf?: boolean;
   content: string;
   timestamp: string;
   status: MessageStatus;
@@ -334,6 +335,7 @@ export interface Conversation {
   id: string;
   projectId: string;
   studentId?: string;
+  studentName?: string;
   clientId?: string;
   
   // UI Display fields (derived)

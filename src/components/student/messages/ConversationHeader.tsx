@@ -21,9 +21,24 @@ interface ConversationHeaderProps {
   onBack: () => void;
   onToggleDetails: () => void;
   showDetails: boolean;
+  viewerRole?: "student" | "client";
 }
 
-export function ConversationHeader({ conversation, onBack, onToggleDetails, showDetails }: ConversationHeaderProps) {
+export function ConversationHeader({
+  conversation,
+  onBack,
+  onToggleDetails,
+  showDetails,
+  viewerRole = "student",
+}: ConversationHeaderProps) {
+  const isClientViewer = viewerRole === "client";
+  const displayName = isClientViewer
+    ? (conversation.studentName || "Student Candidate")
+    : conversation.client;
+  const displayInitial = isClientViewer
+    ? (conversation.studentName?.charAt(0).toUpperCase() || "S")
+    : conversation.clientInitial;
+
   return (
     <div className="flex flex-shrink-0 items-center justify-between border-b border-[var(--color-border-subtle)] bg-white px-4 py-3.5 sm:px-6">
       <div className="flex items-center gap-3">
@@ -38,7 +53,7 @@ export function ConversationHeader({ conversation, onBack, onToggleDetails, show
         {/* Avatar */}
         <div className="relative flex-shrink-0">
           <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 text-sm font-bold text-white">
-            {conversation.clientInitial}
+            {displayInitial}
           </div>
           <span className={cn("absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2 border-white", statusColors[conversation.clientStatus])} />
         </div>
@@ -46,7 +61,7 @@ export function ConversationHeader({ conversation, onBack, onToggleDetails, show
         {/* Info */}
         <div>
           <h3 className="text-sm font-bold text-[var(--color-text-primary)]">
-            {conversation.client}
+            {displayName}
           </h3>
           <p className="text-xs text-[var(--color-text-secondary)]">
             {conversation.projectTitle}
