@@ -12,7 +12,7 @@ import {
   ProjectContext,
 } from "@/components/student/messages";
 import { apiClient, ApiClientError } from "@/lib/api-client";
-import type { Conversation, Message, MessageAttachment } from "@/types";
+import type { Conversation, Message } from "@/types";
 
 export default function MessagesPage() {
   const [conversations, setConversations] = useState<Conversation[]>([]);
@@ -118,18 +118,35 @@ export default function MessagesPage() {
     setShowDetails(false);
   }, []);
 
-  // 6. Send message
+  // 6. Send message with real file attachment upload
   const handleSend = useCallback(
-    async (content: string, attachment?: MessageAttachment): Promise<boolean> => {
+    async (content: string, file?: File | null): Promise<boolean> => {
       if (!activeConvId) return false;
 
       setIsSending(true);
       try {
-        const payload: any = { content };
-        if (attachment) {
-          payload.attachmentName = attachment.name;
-          payload.attachmentSize = attachment.size;
-          payload.attachmentUrl = attachment.id;
+        let uploadRes: any = null;
+
+        // If file attachment exists, upload first via existing /api/files/upload
+        if (file) {
+          const formData = new FormData();
+          formData.append("file", file);
+          formData.append("category", "MESSAGE_ATTACHMENT");
+          formData.append("contextId", activeConvId);
+
+          uploadRes = await apiClient.upload<any>("/api/files/upload", formData);
+        }
+
+        const payload: any = { content: content || "" };
+        if (uploadRes) {
+          payload.attachmentName = uploadRes.originalName || file?.name;
+          const sizeBytes = uploadRes.size || file?.size;
+          if (sizeBytes) {
+            const kb = sizeBytes / 1024;
+            payload.attachmentSize =
+              kb >= 1024 ? `${(kb / 1024).toFixed(1)} MB` : `${Math.round(kb)} KB`;
+          }
+          payload.attachmentUrl = `/api/files/${uploadRes.id}/download?redirect=true`;
         }
 
         const createdMessage = await apiClient.post<Message>(
@@ -149,7 +166,7 @@ export default function MessagesPage() {
             c.id === activeConvId
               ? {
                   ...c,
-                  lastMessage: content || attachment?.name || "",
+                  lastMessage: content || uploadRes?.originalName || file?.name || "Attachment",
                   lastMessageAt: "just now",
                 }
               : c
