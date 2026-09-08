@@ -59,7 +59,7 @@ export function HeroCopy() {
           href="/client/talent"
           className="flex items-center justify-center rounded-full border border-[var(--color-border-subtle)] bg-transparent px-8 py-3.5 text-sm font-medium text-[var(--color-text-primary)] hover:bg-[var(--color-canvas-subtle)] transition-colors w-full sm:w-auto"
         >
-          Hire Students
+          Hire Talent
         </Link>
       </motion.div>
     </div>
