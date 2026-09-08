@@ -295,11 +295,22 @@ export function AddPortfolioModal({
   );
 }
 
-export function ShareProfileModal({ isOpen, onClose, username }: { isOpen: boolean; onClose: () => void; username: string }) {
+export function ShareProfileModal({
+  isOpen,
+  onClose,
+  username,
+  studentId,
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  username: string;
+  studentId?: string;
+}) {
   const [copied, setCopied] = useState(false);
   
-  // mock link
-  const link = `https://skillbridge.dev/student/profile/${username.toLowerCase().replace(/\s+/g, '-')}`;
+  const origin = typeof window !== "undefined" ? window.location.origin : "";
+  const identifier = studentId || username.toLowerCase().replace(/\s+/g, "-");
+  const link = `${origin}/client/talent/${identifier}`;
 
   const handleCopy = () => {
     navigator.clipboard.writeText(link);

@@ -145,7 +145,26 @@ export function SkillBridgeProjects({ projects }: { projects: (WorkProject & { p
 }
 
 export function ClientReviews({ reviews }: { reviews: { id: string; rating: number; review: string; client: string }[] }) {
-  if (reviews.length === 0) return null;
+  if (reviews.length === 0) {
+    return (
+      <div className="mb-12">
+        <div className="mb-4">
+          <h2 className="text-xl font-bold text-[var(--color-text-primary)]">Client Reviews</h2>
+          <p className="text-sm text-[var(--color-text-secondary)] mt-1">
+            Feedback from clients on completed projects.
+          </p>
+        </div>
+        <div className="rounded-2xl border border-dashed border-[var(--color-border-subtle)] bg-[var(--color-canvas-bg)] p-8 text-center">
+          <p className="text-sm font-medium text-[var(--color-text-secondary)]">No reviews yet</p>
+          <p className="text-xs text-[var(--color-text-tertiary)] mt-1">
+            Client reviews and ratings will appear here once you complete projects.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  const avgRating = (reviews.reduce((acc, r) => acc + r.rating, 0) / reviews.length).toFixed(1);
 
   return (
     <div className="mb-12">
@@ -157,9 +176,11 @@ export function ClientReviews({ reviews }: { reviews: { id: string; rating: numb
           </p>
         </div>
         <div className="flex items-center gap-3 rounded-xl bg-[var(--color-canvas-surface)] px-4 py-2 border border-[var(--color-border-subtle)]">
-          <div className="text-lg font-bold text-[var(--color-text-primary)]">4.8 / 5</div>
+          <div className="text-lg font-bold text-[var(--color-text-primary)]">{avgRating} / 5</div>
           <div className="h-6 w-px bg-[var(--color-border-subtle)]" />
-          <div className="text-xs text-[var(--color-text-secondary)]">Based on 8 projects</div>
+          <div className="text-xs text-[var(--color-text-secondary)]">
+            Based on {reviews.length} {reviews.length === 1 ? "review" : "reviews"}
+          </div>
         </div>
       </div>
 

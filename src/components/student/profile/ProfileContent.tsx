@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { Edit2, Eye, EyeOff } from "lucide-react";
+import { Edit2, Eye, EyeOff, Loader2 } from "lucide-react";
 import type { StudentProfile } from "@/types";
 
 export function AboutSection({ about, onEdit }: { about: string; onEdit: () => void }) {
@@ -130,7 +130,15 @@ export function ExperienceEducationSection({ profile }: { profile: StudentProfil
   );
 }
 
-export function ProfileVisibility({ isPublic, onToggle }: { isPublic: boolean; onToggle: () => void }) {
+export function ProfileVisibility({
+  isPublic,
+  onToggle,
+  isLoading = false,
+}: {
+  isPublic: boolean;
+  onToggle: () => void;
+  isLoading?: boolean;
+}) {
   return (
     <div className="mb-8 rounded-2xl border border-[var(--color-border-subtle)] bg-white p-6 shadow-sm">
       <div className="flex items-center justify-between">
@@ -138,14 +146,18 @@ export function ProfileVisibility({ isPublic, onToggle }: { isPublic: boolean; o
           <h2 className="text-lg font-bold text-[var(--color-text-primary)] flex items-center gap-2">
             {isPublic ? <Eye size={18} className="text-blue-600" /> : <EyeOff size={18} className="text-gray-400" />}
             Profile Visibility
+            {isLoading && <Loader2 size={15} className="animate-spin text-blue-600" />}
           </h2>
           <p className="text-xs text-[var(--color-text-secondary)] mt-1">
             {isPublic ? "Clients can discover your profile." : "Your profile is hidden from clients."}
           </p>
         </div>
         <button
+          type="button"
           onClick={onToggle}
-          className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+          disabled={isLoading}
+          aria-label="Toggle profile visibility"
+          className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors disabled:opacity-60 disabled:cursor-not-allowed ${
             isPublic ? "bg-blue-600" : "bg-gray-300"
           }`}
         >

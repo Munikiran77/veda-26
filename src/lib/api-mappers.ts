@@ -176,6 +176,14 @@ export function mapWorkContract(
     startDate: dbContract.createdAt
       ? new Date(dbContract.createdAt).toISOString()
       : new Date().toISOString(),
+    completedAt:
+      dbContract.status === "COMPLETED" && dbContract.updatedAt
+        ? new Date(dbContract.updatedAt).toLocaleDateString("en-US", {
+            month: "short",
+            year: "numeric",
+          })
+        : undefined,
+    earnings: project.budget || undefined,
     lastActivity:
       dbContract.lastActivity || "Work contract active and in progress",
     milestones: [
