@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { Bell, Search, Menu } from "lucide-react";
 import { studentProfile } from "@/data/student";
 import { useStudentAuth } from "@/components/student/student-auth-context";
@@ -28,28 +29,31 @@ export function StudentHeader({ title, onMenuClick }: StudentHeaderProps) {
 
       {/* Right: Search + Notifications + Avatar */}
       <div className="flex items-center gap-2">
-        <button
+        <Link
+          href="/student/projects"
           className="hidden sm:flex items-center gap-2 rounded-xl border border-[var(--color-border-subtle)] bg-[var(--color-canvas-surface)] px-3 py-2 text-sm text-[var(--color-text-secondary)] hover:border-[var(--color-border-hover)] transition-colors"
-          aria-label="Search"
+          aria-label="Search projects"
         >
           <Search size={15} />
           <span>Search...</span>
-        </button>
+        </Link>
         {/* Mobile search icon only */}
-        <button
+        <Link
+          href="/student/projects"
           className="sm:hidden rounded-xl p-2 text-[var(--color-text-secondary)] hover:bg-[var(--color-canvas-surface)] transition-colors"
-          aria-label="Search"
+          aria-label="Search projects"
         >
           <Search size={18} />
-        </button>
+        </Link>
 
-        <button
+        <Link
+          href="/student/messages"
           className="relative rounded-xl p-2 text-[var(--color-text-secondary)] hover:bg-[var(--color-canvas-surface)] transition-colors"
           aria-label="Notifications"
         >
           <Bell size={18} />
           <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-blue-500" />
-        </button>
+        </Link>
 
         <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-violet-500 text-sm font-semibold text-white ml-1">
           {user?.avatar || studentProfile.avatar}

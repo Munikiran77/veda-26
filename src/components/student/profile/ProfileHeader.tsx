@@ -76,11 +76,11 @@ export function ProfileHeader({ profile, onEdit, onShare }: ProfileHeaderProps) 
             <div className="flex flex-col gap-3 text-sm text-[var(--color-text-secondary)]">
               <span className="flex items-center gap-2">
                 <GraduationCap size={16} className="text-gray-400" />
-                B.Tech Computer Science (Mock)
+                {profile.college || profile.education?.[0]?.degree || "B.Tech Computer Science"}
               </span>
               <span className="flex items-center gap-2">
                 <Calendar size={16} className="text-gray-400" />
-                Expected Graduation: 2028 (Mock)
+                {profile.graduationYear ? `Expected Graduation: ${profile.graduationYear}` : profile.education?.[0]?.duration || "Expected Graduation: 2028"}
               </span>
             </div>
           </div>

@@ -3,7 +3,7 @@
 import { use, useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowLeft, Trash2, SearchX } from "lucide-react";
+import { ArrowLeft, ArrowRight, Trash2, SearchX } from "lucide-react";
 import Link from "next/link";
 import { StudentLayout } from "@/components/student/StudentLayout";
 import { ApplicationProgress } from "@/components/student/applications";
@@ -25,7 +25,10 @@ const statusStyles: Record<Application["status"], string> = {
   Withdrawn: "bg-gray-200 text-gray-700 border-gray-300",
 };
 
-type AppWithProject = Application & { project: Project };
+type AppWithProject = Application & {
+  project: Project;
+  workContract?: { id: string; status?: string } | null;
+};
 
 export default function ApplicationDetailsPage({ params }: ApplicationDetailsPageProps) {
   const router = useRouter();
@@ -47,7 +50,7 @@ export default function ApplicationDetailsPage({ params }: ApplicationDetailsPag
         if (isMounted && data) {
           const app = mapApplication(data);
           const project = mapProject(data.project);
-          setAppData({ ...app, project });
+          setAppData({ ...app, project, workContract: data.workContract || null });
         }
       } catch (err: any) {
         if (isMounted) {
@@ -115,6 +118,10 @@ export default function ApplicationDetailsPage({ params }: ApplicationDetailsPag
   }
 
   const { project, ...application } = appData;
+  const workContractId =
+    typeof (application as any).workContract === "string"
+      ? (application as any).workContract
+      : (application as any).workContract?.id;
 
   if (isWithdrawn || application.status === "Withdrawn") {
     return (
@@ -186,6 +193,25 @@ export default function ApplicationDetailsPage({ params }: ApplicationDetailsPag
             <ApplicationProgress status={application.status} />
           </div>
         </div>
+
+        {/* Accepted Application Workspace CTA */}
+        {application.status === "Accepted" && workContractId && (
+          <div className="mb-8 rounded-2xl border border-emerald-200 bg-emerald-50/70 p-5 shadow-xs flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div>
+              <h3 className="text-base font-bold text-emerald-950">Application Accepted!</h3>
+              <p className="text-xs text-emerald-800 mt-1">
+                Your proposal was accepted and your project workspace is ready.
+              </p>
+            </div>
+            <Link
+              href={`/student/work/${workContractId}`}
+              className="inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-600 px-5 py-2.5 text-xs font-semibold text-white hover:bg-emerald-700 transition-colors shrink-0 shadow-xs"
+            >
+              <span>Go to Project Workspace</span>
+              <ArrowRight size={14} />
+            </Link>
+          </div>
+        )}
 
         {/* Application Details */}
         <div className="mb-8 rounded-2xl border border-[var(--color-border-subtle)] bg-white p-6 shadow-sm">

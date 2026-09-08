@@ -195,6 +195,17 @@ function StudentLoginFormInner() {
         </div>
       </div>
 
+      {/* Switch to Signup */}
+      <div className="text-center text-[13px] text-[var(--color-text-secondary)]">
+        Don&apos;t have an account?{" "}
+        <Link
+          href="/client/signup"
+          className="font-semibold text-blue-600 hover:underline"
+        >
+          Sign up
+        </Link>
+      </div>
+
       <div className="text-center">
         <Link
           href="/"

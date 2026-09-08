@@ -14,6 +14,7 @@ import {
   MessageSquare,
   User,
   Settings,
+  LogOut,
   X,
 } from "lucide-react";
 
@@ -33,7 +34,12 @@ interface StudentSidebarProps {
 
 export function StudentSidebar({ isOpen, onClose }: StudentSidebarProps) {
   const pathname = usePathname();
-  const { user } = useStudentAuth();
+  const { user, logout } = useStudentAuth();
+
+  const handleSignOut = async () => {
+    onClose();
+    await logout();
+  };
 
   const sidebarContent = (
     <div className="flex h-full flex-col">
@@ -97,12 +103,24 @@ export function StudentSidebar({ isOpen, onClose }: StudentSidebarProps) {
             </p>
           </div>
           <button
-            className="rounded-lg p-1.5 text-[var(--color-text-secondary)] hover:bg-[var(--color-canvas-surface)] transition-colors flex-shrink-0"
-            aria-label="Settings"
+            type="button"
+            onClick={handleSignOut}
+            className="rounded-lg p-1.5 text-[var(--color-text-secondary)] hover:bg-red-50 hover:text-red-600 transition-colors flex-shrink-0"
+            aria-label="Sign Out"
+            title="Sign Out"
           >
-            <Settings size={16} />
+            <LogOut size={16} />
           </button>
         </div>
+        <button
+          type="button"
+          onClick={handleSignOut}
+          className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl border border-[var(--color-border-subtle)] bg-[var(--color-canvas-surface)] py-2 text-xs font-medium text-[var(--color-text-secondary)] hover:border-red-200 hover:bg-red-50 hover:text-red-600 transition-colors focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-red-500"
+          aria-label="Sign Out"
+        >
+          <LogOut size={14} />
+          <span>Sign Out</span>
+        </button>
       </div>
     </div>
   );
