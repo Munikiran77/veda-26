@@ -1,7 +1,7 @@
 "use client";
 
 import { motion, useReducedMotion } from "framer-motion";
-import { Hero, HowItWorks } from "@/components/sections";
+import { Hero, HowItWorks, About } from "@/components/sections";
 import { BrandIntro, useIntroPhase } from "@/components/intro";
 
 export default function Home() {
@@ -31,6 +31,8 @@ export default function Home() {
       </motion.div>
 
       <HowItWorks />
+
+      <About />
     </main>
   );
 }

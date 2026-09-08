@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { Container } from "./container";
+import { GetStartedModal } from "./get-started-modal";
 import { cn } from "@/lib/utils";
 import { useIntroPhase } from "@/components/intro";
 
@@ -31,9 +32,17 @@ export function Navbar({ className }: NavbarProps) {
   const isRevealed = phase !== "playing";
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
+  const [isGetStartedOpen, setIsGetStartedOpen] = useState(false);
 
   const closeMobileMenu = useCallback(() => {
     setIsMobileMenuOpen(false);
+  }, []);
+
+  // Allow other components to trigger the Get Started choice modal
+  useEffect(() => {
+    const handleOpen = () => setIsGetStartedOpen(true);
+    window.addEventListener("open-get-started", handleOpen);
+    return () => window.removeEventListener("open-get-started", handleOpen);
   }, []);
 
   // Monitor scroll state for enhanced elevation on scroll
@@ -142,15 +151,16 @@ export function Navbar({ className }: NavbarProps) {
               Log in
             </Link>
 
-            <Link
-              href="/student/login"
-              className="group inline-flex items-center gap-1.5 rounded-full bg-[var(--color-text-primary)] px-4.5 py-2 text-[14px] font-medium text-white shadow-xs transition-all duration-200 motion-reduce:transition-none hover:bg-black hover:shadow-md focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-[var(--color-accent)] focus-visible:ring-offset-2 motion-safe:active:scale-[0.98]"
+            <button
+              type="button"
+              onClick={() => setIsGetStartedOpen(true)}
+              className="group inline-flex items-center gap-1.5 rounded-full bg-[var(--color-text-primary)] px-4.5 py-2 text-[14px] font-medium text-white shadow-xs transition-all duration-200 motion-reduce:transition-none hover:bg-black hover:shadow-md focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-[var(--color-accent)] focus-visible:ring-offset-2 motion-safe:active:scale-[0.98] cursor-pointer"
             >
               <span>Get Started</span>
               <span className="transition-transform duration-200 motion-safe:group-hover:translate-x-0.5">
                 →
               </span>
-            </Link>
+            </button>
           </div>
 
           {/* Mobile: Hamburger / Close Trigger */}
@@ -230,19 +240,28 @@ export function Navbar({ className }: NavbarProps) {
                   Log in
                 </Link>
 
-                <Link
-                  href="/student/login"
-                  onClick={closeMobileMenu}
-                  className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-[var(--color-text-primary)] text-[15px] font-medium text-white shadow-xs transition-colors hover:bg-black motion-safe:active:scale-[0.99] focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-[var(--color-accent)]"
+                <button
+                  type="button"
+                  onClick={() => {
+                    closeMobileMenu();
+                    setIsGetStartedOpen(true);
+                  }}
+                  className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-[var(--color-text-primary)] text-[15px] font-medium text-white shadow-xs transition-colors hover:bg-black motion-safe:active:scale-[0.99] focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-[var(--color-accent)] cursor-pointer"
                 >
                   <span>Get Started</span>
                   <span>→</span>
-                </Link>
+                </button>
               </div>
             </Container>
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Choice Modal: Student vs Client */}
+      <GetStartedModal
+        isOpen={isGetStartedOpen}
+        onClose={() => setIsGetStartedOpen(false)}
+      />
     </motion.header>
   );
 }
