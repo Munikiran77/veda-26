@@ -2,6 +2,7 @@ import React from "react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { getStudentById } from "@/lib/server/students/service";
+import { getServerSession } from "@/lib/server/auth/context";
 import { mapTalentStudent } from "@/lib/api-mappers";
 import { StudentProfileView } from "@/components/client";
 
@@ -13,7 +14,8 @@ interface PageProps {
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { id } = await params;
-  const result = await getStudentById(id);
+  const auth = await getServerSession();
+  const result = await getStudentById(id, auth);
 
   if ("error" in result || !result.student) {
     return {
@@ -29,7 +31,8 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
 export default async function StudentDetailPage({ params }: PageProps) {
   const { id } = await params;
-  const result = await getStudentById(id);
+  const auth = await getServerSession();
+  const result = await getStudentById(id, auth);
 
   if ("error" in result || !result.student) {
     return (

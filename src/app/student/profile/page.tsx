@@ -40,28 +40,13 @@ function StudentProfileContent() {
   // Target student id: authenticated student or canonical demo student
   const studentTargetId = user?.studentProfile?.id || user?.id || "student-1";
 
-  const getPersistedVisibility = (studentId: string, fallback: boolean): boolean => {
-    if (typeof window === "undefined") return fallback;
-    try {
-      const stored = localStorage.getItem(`skillbridge_profile_visibility_${studentId}`);
-      if (stored !== null) {
-        return stored === "true";
-      }
-    } catch {
-      // Fallback to default
-    }
-    return fallback;
-  };
-
   const loadProfile = useCallback(async () => {
     try {
       setIsLoading(true);
       setError(null);
       const data = await apiClient.get<any>(`/api/students/${studentTargetId}`);
       if (data) {
-        const mapped = mapStudentProfile(data);
-        const persistedVisibility = getPersistedVisibility(mapped.id, mapped.isPublic);
-        setProfile({ ...mapped, isPublic: persistedVisibility });
+        setProfile(mapStudentProfile(data));
       }
     } catch (err: any) {
       setError(err?.message || "Failed to load student profile");
@@ -111,22 +96,18 @@ function StudentProfileContent() {
 
     setIsVisibilitySaving(true);
     try {
-      // Persist locally immediately for fast feedback
-      if (typeof window !== "undefined") {
-        localStorage.setItem(`skillbridge_profile_visibility_${profile.id}`, String(nextState));
-      }
-
-      // Call authenticated student profile update API
-      await apiClient.patch(`/api/students/${profile.id}`, {
+      // Call authenticated student profile update API to persist in PostgreSQL
+      const updated = await apiClient.patch<any>(`/api/students/${profile.id}`, {
         isPublic: nextState,
       });
 
-      setProfile((prev) => (prev ? { ...prev, isPublic: nextState } : null));
+      if (updated) {
+        setProfile(mapStudentProfile(updated));
+      } else {
+        setProfile((prev) => (prev ? { ...prev, isPublic: nextState } : null));
+      }
     } catch (err: any) {
       // Revert if API fails
-      if (typeof window !== "undefined") {
-        localStorage.setItem(`skillbridge_profile_visibility_${profile.id}`, String(previousState));
-      }
       setProfile((prev) => (prev ? { ...prev, isPublic: previousState } : null));
       alert(err?.message || "Failed to update profile visibility.");
     } finally {
@@ -147,9 +128,7 @@ function StudentProfileContent() {
       };
       const data = await apiClient.patch<any>(`/api/students/${profile.id}`, payload);
       if (data) {
-        const mapped = mapStudentProfile(data);
-        const persistedVisibility = getPersistedVisibility(mapped.id, profile.isPublic);
-        setProfile({ ...mapped, isPublic: persistedVisibility });
+        setProfile(mapStudentProfile(data));
       }
       setIsEditModalOpen(false);
     } catch (err: any) {

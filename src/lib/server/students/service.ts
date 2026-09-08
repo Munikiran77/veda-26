@@ -23,6 +23,7 @@ export interface UpdateStudentInput {
   availability?: string;
   hourlyRate?: string;
   profileStrength?: number;
+  isPublic?: boolean;
   skills?: string[];
 }
 
@@ -65,6 +66,7 @@ function sanitizeStudent(dbStudent: any, isOwner: boolean = false) {
     availability: dbStudent.availability || "Available Now",
     hourlyRate: dbStudent.hourlyRate || "₹500/hr",
     profileStrength: dbStudent.profileStrength ?? 85,
+    isPublic: typeof dbStudent.isPublic === "boolean" ? dbStudent.isPublic : true,
     createdAt: dbStudent.createdAt ? new Date(dbStudent.createdAt).toISOString() : new Date().toISOString(),
     skills: Array.isArray(dbStudent.skills)
       ? dbStudent.skills.map((s: any) => ({
@@ -93,7 +95,9 @@ function sanitizeStudent(dbStudent: any, isOwner: boolean = false) {
 }
 
 export async function listStudents(query: ListStudentsQuery = {}) {
-  const where: any = {};
+  const where: any = {
+    isPublic: true,
+  };
 
   if (query.expertise && query.expertise !== "All Categories") {
     where.expertise = { equals: query.expertise, mode: "insensitive" };
@@ -200,6 +204,12 @@ export async function getStudentById(id: string, auth?: AuthenticatedUser | null
   }
 
   const isOwner = auth?.role === UserRole.STUDENT && (auth.studentProfile?.id === student.id || auth.user.id === student.userId);
+
+  // If the profile is private and caller is not the owner, hide from public discovery
+  if (!student.isPublic && !isOwner) {
+    return { error: "NOT_FOUND" as const };
+  }
+
   return { student: sanitizeStudent(student, isOwner) };
 }
 
@@ -250,6 +260,7 @@ export async function updateStudentProfile(
   if (input.availability !== undefined) updateData.availability = input.availability.trim();
   if (input.hourlyRate !== undefined) updateData.hourlyRate = input.hourlyRate.trim();
   if (typeof input.profileStrength === "number") updateData.profileStrength = input.profileStrength;
+  if (typeof input.isPublic === "boolean") updateData.isPublic = input.isPublic;
 
   await prisma.studentProfile.update({
     where: { id: student.id },

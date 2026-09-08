@@ -107,6 +107,7 @@ model StudentProfile {
   availability      String?            // Available Now, 10-20 hrs/week, etc.
   hourlyRate        String?            // e.g. ₹500/hr
   profileStrength   Int?               @default(80)
+  isPublic          Boolean            @default(true)
 
   createdAt         DateTime           @default(now())
   updatedAt         DateTime           @updatedAt
