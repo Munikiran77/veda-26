@@ -9,21 +9,24 @@ import {
   StudentAuthContext,
 } from "@/components/student/student-auth-context";
 
-function StudentLoginFormInner() {
+function StudentSignupFormInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { user, isLoading, login } = useStudentAuth();
+  const { user, isLoading, signup } = useStudentAuth();
 
   const from = searchParams.get("from") || "/student";
 
-  // If already authenticated as a student, automatically proceed to target destination
+  // If already authenticated as a student, automatically proceed to destination
   useEffect(() => {
     if (!isLoading && user && user.role === "student") {
       router.replace(from.startsWith("/student") ? from : "/student");
     }
   }, [user, isLoading, from, router]);
 
+  const [name, setName] = useState("");
   const [email, setEmail] = useState("");
+  const [college, setCollege] = useState("");
+  const [headline, setHeadline] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -32,41 +35,36 @@ function StudentLoginFormInner() {
     e.preventDefault();
     setError(null);
 
+    const cleanName = name.trim();
+    if (!cleanName) {
+      setError("Please enter your full name.");
+      return;
+    }
+
     const cleanEmail = email.trim();
-    if (!cleanEmail) {
-      setError("Please enter your university or personal email.");
+    if (!cleanEmail || !cleanEmail.includes("@") || !cleanEmail.includes(".")) {
+      setError("Please enter a valid university or personal email address.");
       return;
     }
 
-    if (!cleanEmail.includes("@") || !cleanEmail.includes(".")) {
-      setError("Please enter a valid email address.");
-      return;
-    }
-
-    if (!password) {
-      setError("Please enter your password.");
+    if (!password || password.length < 6) {
+      setError("Password must be at least 6 characters long.");
       return;
     }
 
     setIsSubmitting(true);
 
     try {
-      await login(cleanEmail, password);
+      await signup(
+        cleanName,
+        cleanEmail,
+        password,
+        headline.trim() || undefined,
+        college.trim() || undefined
+      );
       router.push(from.startsWith("/student") ? from : "/student");
     } catch (err: any) {
-      setError(err.message || "Unable to sign in. Please check credentials.");
-      setIsSubmitting(false);
-    }
-  };
-
-  const handleDemoSignIn = async () => {
-    setIsSubmitting(true);
-    setError(null);
-    try {
-      await login("alex.johnson@university.edu", "Student123!");
-      router.push(from.startsWith("/student") ? from : "/student");
-    } catch (err: any) {
-      setError(err.message || "Unable to complete demo student sign in.");
+      setError(err.message || "Failed to create student account. Please try again.");
       setIsSubmitting(false);
     }
   };
@@ -92,15 +90,15 @@ function StudentLoginFormInner() {
             Student Portal &bull; Role: Student
           </span>
           <h1 className="mt-2 text-2xl sm:text-3xl font-semibold tracking-tight text-[var(--color-text-primary)]">
-            Sign in as Student
+            Create Student Account
           </h1>
           <p className="mt-1 text-[14px] text-[var(--color-text-secondary)]">
-            Discover real-world projects, submit proposals, and build your career.
+            Discover projects, submit proposals, and build your verified portfolio.
           </p>
         </div>
       </div>
 
-      {/* Main Login Form Card */}
+      {/* Main Signup Form Card */}
       <div className="rounded-2xl border border-[var(--color-border-subtle)] bg-[var(--color-canvas-bg)] p-6 sm:p-8 shadow-2xs space-y-5">
         {user && user.role === "student" && (
           <div className="rounded-xl border border-blue-500/20 bg-blue-500/5 p-3.5 flex items-center justify-between gap-3 text-[13px]">
@@ -125,7 +123,7 @@ function StudentLoginFormInner() {
             <button
               type="button"
               onClick={() => setError(null)}
-              className="text-red-500 hover:text-red-800 font-bold"
+              className="text-red-500 hover:text-red-800 font-bold cursor-pointer"
             >
               &times;
             </button>
@@ -135,10 +133,31 @@ function StudentLoginFormInner() {
         <form onSubmit={handleSubmit} noValidate className="space-y-4">
           <div className="space-y-1.5">
             <label
+              htmlFor="student-name"
+              className="block text-[13px] font-semibold text-[var(--color-text-primary)]"
+            >
+              Full Name <span className="text-red-500">*</span>
+            </label>
+            <input
+              id="student-name"
+              type="text"
+              value={name}
+              onChange={(e) => {
+                setName(e.target.value);
+                if (error) setError(null);
+              }}
+              placeholder="e.g. Alex Johnson"
+              autoComplete="name"
+              className="w-full rounded-xl border border-[var(--color-border-subtle)] bg-[var(--color-canvas-bg)] px-4 py-2.5 text-[14px] text-[var(--color-text-primary)] placeholder:text-[var(--color-text-tertiary)] focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-[var(--color-accent)] transition-all"
+            />
+          </div>
+
+          <div className="space-y-1.5">
+            <label
               htmlFor="student-email"
               className="block text-[13px] font-semibold text-[var(--color-text-primary)]"
             >
-              Student Email
+              Student / University Email <span className="text-red-500">*</span>
             </label>
             <input
               id="student-email"
@@ -155,14 +174,47 @@ function StudentLoginFormInner() {
           </div>
 
           <div className="space-y-1.5">
-            <div className="flex items-center justify-between">
-              <label
-                htmlFor="student-password"
-                className="block text-[13px] font-semibold text-[var(--color-text-primary)]"
-              >
-                Password
-              </label>
-            </div>
+            <label
+              htmlFor="student-college"
+              className="block text-[13px] font-semibold text-[var(--color-text-primary)]"
+            >
+              College / University <span className="text-[11px] font-normal text-[var(--color-text-tertiary)]">(Optional)</span>
+            </label>
+            <input
+              id="student-college"
+              type="text"
+              value={college}
+              onChange={(e) => setCollege(e.target.value)}
+              placeholder="e.g. Stanford University or MIT"
+              autoComplete="organization"
+              className="w-full rounded-xl border border-[var(--color-border-subtle)] bg-[var(--color-canvas-bg)] px-4 py-2.5 text-[14px] text-[var(--color-text-primary)] placeholder:text-[var(--color-text-tertiary)] focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-[var(--color-accent)] transition-all"
+            />
+          </div>
+
+          <div className="space-y-1.5">
+            <label
+              htmlFor="student-headline"
+              className="block text-[13px] font-semibold text-[var(--color-text-primary)]"
+            >
+              Headline / Field of Study <span className="text-[11px] font-normal text-[var(--color-text-tertiary)]">(Optional)</span>
+            </label>
+            <input
+              id="student-headline"
+              type="text"
+              value={headline}
+              onChange={(e) => setHeadline(e.target.value)}
+              placeholder="e.g. Computer Science & Full-Stack Developer"
+              className="w-full rounded-xl border border-[var(--color-border-subtle)] bg-[var(--color-canvas-bg)] px-4 py-2.5 text-[14px] text-[var(--color-text-primary)] placeholder:text-[var(--color-text-tertiary)] focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-[var(--color-accent)] transition-all"
+            />
+          </div>
+
+          <div className="space-y-1.5">
+            <label
+              htmlFor="student-password"
+              className="block text-[13px] font-semibold text-[var(--color-text-primary)]"
+            >
+              Password <span className="text-red-500">*</span>
+            </label>
             <input
               id="student-password"
               type="password"
@@ -171,49 +223,41 @@ function StudentLoginFormInner() {
                 setPassword(e.target.value);
                 if (error) setError(null);
               }}
-              placeholder="••••••••"
-              autoComplete="current-password"
+              placeholder="Minimum 6 characters"
+              autoComplete="new-password"
               className="w-full rounded-xl border border-[var(--color-border-subtle)] bg-[var(--color-canvas-bg)] px-4 py-2.5 text-[14px] text-[var(--color-text-primary)] placeholder:text-[var(--color-text-tertiary)] focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-[var(--color-accent)] transition-all"
             />
+          </div>
+
+          <div className="rounded-xl bg-[var(--color-canvas-surface)] p-3 text-[12px] text-[var(--color-text-secondary)] border border-[var(--color-border-subtle)]">
+            By creating a student account, your role will be stored as <span className="font-semibold text-[var(--color-text-primary)]">Student</span> to browse projects and submit proposals.
           </div>
 
           <button
             type="submit"
             disabled={isSubmitting}
-            className="w-full mt-2 inline-flex h-11 items-center justify-center gap-2 rounded-full bg-[var(--color-text-primary)] px-6 text-[14px] font-medium text-white shadow-xs transition-all hover:bg-black hover:shadow-sm active:scale-[0.98] disabled:opacity-60 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-[var(--color-accent)]"
+            className="w-full mt-2 inline-flex h-11 items-center justify-center gap-2 rounded-full bg-[var(--color-text-primary)] px-6 text-[14px] font-medium text-white shadow-xs transition-all hover:bg-black hover:shadow-sm active:scale-[0.98] disabled:opacity-60 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-[var(--color-accent)] cursor-pointer"
           >
             {isSubmitting ? (
               <>
                 <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
-                <span>Signing in...</span>
+                <span>Creating Account...</span>
               </>
             ) : (
-              <span>Sign In as Student</span>
+              <span>Create Student Account</span>
             )}
           </button>
         </form>
-
-        {/* 1-Click Fast Demo Fill */}
-        <div className="pt-4 border-t border-[var(--color-border-subtle)]">
-          <button
-            type="button"
-            onClick={handleDemoSignIn}
-            disabled={isSubmitting}
-            className="w-full inline-flex h-10 items-center justify-center gap-2 rounded-full border border-[var(--color-border-subtle)] bg-[var(--color-canvas-surface)] px-4 text-[13px] font-medium text-[var(--color-text-primary)] hover:bg-white hover:border-[var(--color-border-hover)] transition-all"
-          >
-            <span>⚡ Instant Demo Student Sign In</span>
-          </button>
-        </div>
       </div>
 
-      {/* Switch to Signup */}
+      {/* Switch to Login */}
       <div className="text-center text-[13px] text-[var(--color-text-secondary)]">
-        Don&apos;t have an account?{" "}
+        Already have a student account?{" "}
         <Link
-          href={`/student/signup${from !== "/student" ? `?from=${encodeURIComponent(from)}` : ""}`}
+          href={`/student/login${from !== "/student" ? `?from=${encodeURIComponent(from)}` : ""}`}
           className="font-semibold text-blue-600 hover:underline"
         >
-          Sign up
+          Sign in
         </Link>
       </div>
 
@@ -229,7 +273,7 @@ function StudentLoginFormInner() {
   );
 }
 
-export function StudentLoginForm() {
+export function StudentSignupForm() {
   const existingContext = useContext(StudentAuthContext);
   const content = (
     <Suspense
@@ -239,7 +283,7 @@ export function StudentLoginForm() {
         </div>
       }
     >
-      <StudentLoginFormInner />
+      <StudentSignupFormInner />
     </Suspense>
   );
 

@@ -50,7 +50,7 @@ export const AUTH_CONFIG: Record<AuthMode, AuthConfigItem> = {
       {
         role: "Student",
         description: "Create a student account",
-        href: "/student/login",
+        href: "/student/signup",
         color: "blue",
       },
       {
