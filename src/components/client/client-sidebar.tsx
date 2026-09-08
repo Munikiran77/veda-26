@@ -154,7 +154,7 @@ export const CLIENT_SIDEBAR_ITEMS: NavItemConfig[] = [
   },
   {
     label: "Payments",
-    href: "/client/dashboard#payments",
+    href: "/client/payments",
     icon: ({ className, "aria-hidden": ariaHidden }) => (
       <svg
         className={className}
@@ -173,7 +173,7 @@ export const CLIENT_SIDEBAR_ITEMS: NavItemConfig[] = [
   },
   {
     label: "Settings",
-    href: "/client/dashboard#settings",
+    href: "/client/settings",
     icon: ({ className, "aria-hidden": ariaHidden }) => (
       <svg
         className={className}
@@ -350,6 +350,14 @@ export function ClientSidebar({ isOpen, onClose, className }: ClientSidebarProps
               isActive =
                 pathname === "/client/messages" ||
                 Boolean(pathname?.startsWith("/client/messages/"));
+            } else if (item.label === "Payments") {
+              isActive =
+                pathname === "/client/payments" ||
+                Boolean(pathname?.startsWith("/client/payments/"));
+            } else if (item.label === "Settings") {
+              isActive =
+                pathname === "/client/settings" ||
+                Boolean(pathname?.startsWith("/client/settings/"));
             } else {
               isActive = pathname === item.href;
             }
