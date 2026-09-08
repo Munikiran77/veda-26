@@ -1,3 +1,3 @@
 export * from "./container";
 export * from "./navbar";
-export * from "./get-started-modal";
+export * from "./auth-role-dropdown";

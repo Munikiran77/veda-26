@@ -1,11 +1,12 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
+import { ChevronDown, GraduationCap, Briefcase, ChevronRight } from "lucide-react";
 import { Container } from "./container";
-import { GetStartedModal } from "./get-started-modal";
+import { AuthRoleDropdown, type AuthMode, AUTH_CONFIG } from "./auth-role-dropdown";
 import { cn } from "@/lib/utils";
 import { useIntroPhase } from "@/components/intro";
 
@@ -32,17 +33,13 @@ export function Navbar({ className }: NavbarProps) {
   const isRevealed = phase !== "playing";
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
-  const [isGetStartedOpen, setIsGetStartedOpen] = useState(false);
+  const [activeAuthMenu, setActiveAuthMenu] = useState<AuthMode | null>(null);
+  const [mobileExpandedSection, setMobileExpandedSection] = useState<AuthMode | null>(null);
+  const authRef = useRef<HTMLDivElement>(null);
 
   const closeMobileMenu = useCallback(() => {
     setIsMobileMenuOpen(false);
-  }, []);
-
-  // Allow other components to trigger the Get Started choice modal
-  useEffect(() => {
-    const handleOpen = () => setIsGetStartedOpen(true);
-    window.addEventListener("open-get-started", handleOpen);
-    return () => window.removeEventListener("open-get-started", handleOpen);
+    setMobileExpandedSection(null);
   }, []);
 
   // Monitor scroll state for enhanced elevation on scroll
@@ -55,21 +52,40 @@ export function Navbar({ className }: NavbarProps) {
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
-  // Close mobile menu on ESC key press
+  // Close dropdown on outside click
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (authRef.current && !authRef.current.contains(event.target as Node)) {
+        setActiveAuthMenu(null);
+      }
+    };
+
+    if (activeAuthMenu) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [activeAuthMenu]);
+
+  // Close menus on ESC key press
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape" && isMobileMenuOpen) {
-        setIsMobileMenuOpen(false);
+      if (e.key === "Escape") {
+        if (activeAuthMenu) setActiveAuthMenu(null);
+        if (isMobileMenuOpen) setIsMobileMenuOpen(false);
       }
     };
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [isMobileMenuOpen]);
+  }, [activeAuthMenu, isMobileMenuOpen]);
 
-  // Handle route change closing mobile menu
+  // Handle route change closing menus
   useEffect(() => {
     setIsMobileMenuOpen(false);
+    setActiveAuthMenu(null);
+    setMobileExpandedSection(null);
   }, [pathname]);
 
   // Lock body scroll when mobile menu is active
@@ -143,24 +159,80 @@ export function Navbar({ className }: NavbarProps) {
           </nav>
 
           {/* Right: Actions */}
-          <div className="hidden md:flex items-center gap-3 lg:gap-4">
-            <Link
-              href="/student/login"
-              className="text-[14px] font-medium text-[var(--color-text-secondary)] transition-colors duration-200 hover:text-[var(--color-text-primary)] focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-[var(--color-accent)] focus-visible:ring-offset-2 rounded-full px-4 py-2 motion-safe:active:scale-[0.99]"
-            >
-              Log in
-            </Link>
+          <div ref={authRef} className="relative hidden md:flex items-center gap-2 lg:gap-3">
+            {/* Login Trigger */}
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() =>
+                  setActiveAuthMenu((curr) => (curr === "login" ? null : "login"))
+                }
+                aria-expanded={activeAuthMenu === "login"}
+                aria-haspopup="menu"
+                className={cn(
+                  "inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-[14px] font-medium transition-all duration-200 cursor-pointer focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-[var(--color-accent)] focus-visible:ring-offset-2 motion-safe:active:scale-[0.99]",
+                  activeAuthMenu === "login"
+                    ? "bg-black/[0.06] text-[var(--color-text-primary)]"
+                    : "text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] hover:bg-black/[0.03]"
+                )}
+              >
+                <span>Log in</span>
+                <ChevronDown
+                  className={cn(
+                    "h-3.5 w-3.5 transition-transform duration-200 text-[#8e8e93]",
+                    activeAuthMenu === "login" && "rotate-180 text-[var(--color-text-primary)]"
+                  )}
+                />
+              </button>
 
-            <button
-              type="button"
-              onClick={() => setIsGetStartedOpen(true)}
-              className="group inline-flex items-center gap-1.5 rounded-full bg-[var(--color-text-primary)] px-4.5 py-2 text-[14px] font-medium text-white shadow-xs transition-all duration-200 motion-reduce:transition-none hover:bg-black hover:shadow-md focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-[var(--color-accent)] focus-visible:ring-offset-2 motion-safe:active:scale-[0.98] cursor-pointer"
-            >
-              <span>Get Started</span>
-              <span className="transition-transform duration-200 motion-safe:group-hover:translate-x-0.5">
-                →
-              </span>
-            </button>
+              <AnimatePresence>
+                {activeAuthMenu === "login" && (
+                  <AuthRoleDropdown
+                    mode="login"
+                    align="right"
+                    onClose={() => setActiveAuthMenu(null)}
+                    onSwitchMode={(mode) => setActiveAuthMenu(mode)}
+                  />
+                )}
+              </AnimatePresence>
+            </div>
+
+            {/* Sign Up Trigger */}
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() =>
+                  setActiveAuthMenu((curr) => (curr === "signup" ? null : "signup"))
+                }
+                aria-expanded={activeAuthMenu === "signup"}
+                aria-haspopup="menu"
+                className={cn(
+                  "group inline-flex items-center gap-1.5 rounded-full px-4.5 py-2 text-[14px] font-medium shadow-xs transition-all duration-200 cursor-pointer focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-[var(--color-accent)] focus-visible:ring-offset-2 motion-safe:active:scale-[0.98]",
+                  activeAuthMenu === "signup"
+                    ? "bg-black text-white shadow-md ring-2 ring-[var(--color-accent)] ring-offset-2"
+                    : "bg-[var(--color-text-primary)] text-white hover:bg-black hover:shadow-md"
+                )}
+              >
+                <span>Sign Up</span>
+                <ChevronDown
+                  className={cn(
+                    "h-3.5 w-3.5 transition-transform duration-200 opacity-70 group-hover:opacity-100",
+                    activeAuthMenu === "signup" && "rotate-180 opacity-100"
+                  )}
+                />
+              </button>
+
+              <AnimatePresence>
+                {activeAuthMenu === "signup" && (
+                  <AuthRoleDropdown
+                    mode="signup"
+                    align="right"
+                    onClose={() => setActiveAuthMenu(null)}
+                    onSwitchMode={(mode) => setActiveAuthMenu(mode)}
+                  />
+                )}
+              </AnimatePresence>
+            </div>
           </div>
 
           {/* Mobile: Hamburger / Close Trigger */}
@@ -231,37 +303,146 @@ export function Navbar({ className }: NavbarProps) {
 
               <div className="my-5 h-px w-full bg-[var(--color-border-subtle)]" />
 
-              <div className="flex flex-col gap-3">
-                <Link
-                  href="/student/login"
-                  onClick={closeMobileMenu}
-                  className="flex h-12 w-full items-center justify-center rounded-full border border-[var(--color-border-subtle)] bg-white text-[15px] font-medium text-[var(--color-text-primary)] transition-colors hover:bg-[var(--color-canvas-surface)] motion-safe:active:scale-[0.99] focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-[var(--color-accent)]"
-                >
-                  Log in
-                </Link>
+              {/* Mobile Auth Sections */}
+              <div className="flex flex-col gap-2.5">
+                {/* Mobile Log in Accordion */}
+                <div className="rounded-2xl border border-[var(--color-border-subtle)] bg-white/70 overflow-hidden transition-colors">
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setMobileExpandedSection((curr) => (curr === "login" ? null : "login"))
+                    }
+                    aria-expanded={mobileExpandedSection === "login"}
+                    className="flex h-12 w-full items-center justify-between px-4 text-[15px] font-medium text-[var(--color-text-primary)] transition-colors hover:bg-black/[0.02] cursor-pointer"
+                  >
+                    <span>Log in</span>
+                    <ChevronDown
+                      className={cn(
+                        "h-4 w-4 text-[#8e8e93] transition-transform duration-200",
+                        mobileExpandedSection === "login" && "rotate-180 text-[var(--color-text-primary)]"
+                      )}
+                    />
+                  </button>
 
-                <button
-                  type="button"
-                  onClick={() => {
-                    closeMobileMenu();
-                    setIsGetStartedOpen(true);
-                  }}
-                  className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-[var(--color-text-primary)] text-[15px] font-medium text-white shadow-xs transition-colors hover:bg-black motion-safe:active:scale-[0.99] focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-[var(--color-accent)] cursor-pointer"
-                >
-                  <span>Get Started</span>
-                  <span>→</span>
-                </button>
+                  <AnimatePresence>
+                    {mobileExpandedSection === "login" && (
+                      <motion.div
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: "auto", opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
+                        className="overflow-hidden border-t border-[var(--color-border-subtle)] bg-[#fafafc] px-2 py-2 space-y-1"
+                      >
+                        {AUTH_CONFIG.login.options.map((opt) => (
+                          <Link
+                            key={opt.role}
+                            href={opt.href}
+                            onClick={closeMobileMenu}
+                            className="flex items-center justify-between rounded-xl p-2.5 transition-colors hover:bg-white active:bg-white focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-[var(--color-accent)]"
+                          >
+                            <div className="flex items-center gap-3">
+                              <div
+                                className={cn(
+                                  "flex h-8 w-8 shrink-0 items-center justify-center rounded-lg",
+                                  opt.color === "blue"
+                                    ? "bg-blue-500/10 text-blue-600"
+                                    : "bg-purple-500/10 text-purple-600"
+                                )}
+                              >
+                                {opt.color === "blue" ? (
+                                  <GraduationCap className="h-4.5 w-4.5" />
+                                ) : (
+                                  <Briefcase className="h-4 w-4" />
+                                )}
+                              </div>
+                              <div>
+                                <p className="text-[14px] font-semibold text-[#1c1c1e] leading-tight">
+                                  {opt.role}
+                                </p>
+                                <p className="text-[12px] text-[#8e8e93]">
+                                  {opt.description}
+                                </p>
+                              </div>
+                            </div>
+                            <ChevronRight className="h-4 w-4 text-[#8e8e93] shrink-0 ml-2" />
+                          </Link>
+                        ))}
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+
+                {/* Mobile Sign up Accordion */}
+                <div className="rounded-2xl border border-[var(--color-border-subtle)] bg-white/70 overflow-hidden transition-colors">
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setMobileExpandedSection((curr) => (curr === "signup" ? null : "signup"))
+                    }
+                    aria-expanded={mobileExpandedSection === "signup"}
+                    className="flex h-12 w-full items-center justify-between px-4 text-[15px] font-medium text-[var(--color-text-primary)] transition-colors hover:bg-black/[0.02] cursor-pointer"
+                  >
+                    <span className="font-semibold">Sign Up</span>
+                    <ChevronDown
+                      className={cn(
+                        "h-4 w-4 text-[#8e8e93] transition-transform duration-200",
+                        mobileExpandedSection === "signup" && "rotate-180 text-[var(--color-text-primary)]"
+                      )}
+                    />
+                  </button>
+
+                  <AnimatePresence>
+                    {mobileExpandedSection === "signup" && (
+                      <motion.div
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: "auto", opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
+                        className="overflow-hidden border-t border-[var(--color-border-subtle)] bg-[#fafafc] px-2 py-2 space-y-1"
+                      >
+                        {AUTH_CONFIG.signup.options.map((opt) => (
+                          <Link
+                            key={opt.role}
+                            href={opt.href}
+                            onClick={closeMobileMenu}
+                            className="flex items-center justify-between rounded-xl p-2.5 transition-colors hover:bg-white active:bg-white focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-[var(--color-accent)]"
+                          >
+                            <div className="flex items-center gap-3">
+                              <div
+                                className={cn(
+                                  "flex h-8 w-8 shrink-0 items-center justify-center rounded-lg",
+                                  opt.color === "blue"
+                                    ? "bg-blue-500/10 text-blue-600"
+                                    : "bg-purple-500/10 text-purple-600"
+                                )}
+                              >
+                                {opt.color === "blue" ? (
+                                  <GraduationCap className="h-4.5 w-4.5" />
+                                ) : (
+                                  <Briefcase className="h-4 w-4" />
+                                )}
+                              </div>
+                              <div>
+                                <p className="text-[14px] font-semibold text-[#1c1c1e] leading-tight">
+                                  {opt.role}
+                                </p>
+                                <p className="text-[12px] text-[#8e8e93]">
+                                  {opt.description}
+                                </p>
+                              </div>
+                            </div>
+                            <ChevronRight className="h-4 w-4 text-[#8e8e93] shrink-0 ml-2" />
+                          </Link>
+                        ))}
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
               </div>
             </Container>
           </motion.div>
         )}
       </AnimatePresence>
-
-      {/* Choice Modal: Student vs Client */}
-      <GetStartedModal
-        isOpen={isGetStartedOpen}
-        onClose={() => setIsGetStartedOpen(false)}
-      />
     </motion.header>
   );
 }
