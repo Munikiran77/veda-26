@@ -262,10 +262,14 @@ export default function ClientDashboardPage() {
                       {project.budget}
                     </span>
                     <span>&bull;</span>
-                    <span>
+                    <Link
+                      href={`/client/projects/${project.id}/applicants`}
+                      className="hover:text-[#0071e3] hover:underline transition-colors"
+                      title={`View applicants for ${project.title}`}
+                    >
                       {project.applicantsCount}{" "}
                       {project.applicantsCount === 1 ? "applicant" : "applicants"}
-                    </span>
+                    </Link>
                   </div>
                 </div>
 
@@ -277,12 +281,20 @@ export default function ClientDashboardPage() {
                       day: "numeric",
                     })}
                   </span>
-                  <Link
-                    href={`/client/projects/${project.id}`}
-                    className="text-[12px] font-medium text-[#0071e3] hover:underline"
-                  >
-                    View Details &rarr;
-                  </Link>
+                  <div className="flex items-center gap-3">
+                    <Link
+                      href={`/client/projects/${project.id}/applicants`}
+                      className="text-[12px] font-medium text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]"
+                    >
+                      Applicants &rarr;
+                    </Link>
+                    <Link
+                      href={`/client/projects/${project.id}`}
+                      className="text-[12px] font-medium text-[#0071e3] hover:underline"
+                    >
+                      View Details &rarr;
+                    </Link>
+                  </div>
                 </div>
               </div>
             ))}
