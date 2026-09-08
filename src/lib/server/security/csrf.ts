@@ -23,11 +23,19 @@ function getAllowedHosts(currentHost: string): Set<string> {
     } catch {}
   }
 
-  // 2. Vercel System Deployment URL (e.g. project.vercel.app)
+  // 2. Vercel System Deployment URLs
   const vercelUrl = process.env.VERCEL_URL;
   if (vercelUrl) {
     try {
       const parsed = vercelUrl.includes("://") ? new URL(vercelUrl).host : vercelUrl;
+      allowed.add(parsed.toLowerCase());
+    } catch {}
+  }
+
+  const vercelProdUrl = process.env.VERCEL_PROJECT_PRODUCTION_URL;
+  if (vercelProdUrl) {
+    try {
+      const parsed = vercelProdUrl.includes("://") ? new URL(vercelProdUrl).host : vercelProdUrl;
       allowed.add(parsed.toLowerCase());
     } catch {}
   }
@@ -58,7 +66,8 @@ export function checkCsrf(req: Request): { valid: boolean; message?: string } {
   }
 
   const origin = req.headers.get("origin");
-  const host = req.headers.get("x-forwarded-host") || req.headers.get("host");
+  const rawHost = req.headers.get("x-forwarded-host") || req.headers.get("host");
+  const host = rawHost ? rawHost.split(",")[0].trim() : null;
 
   if (!host) {
     return { valid: true };

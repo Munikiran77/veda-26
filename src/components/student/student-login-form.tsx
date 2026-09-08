@@ -3,7 +3,7 @@
 import React, { useState, Suspense } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useStudentAuth } from "@/components/student/student-auth-context";
+import { useStudentAuth, StudentAuthProvider } from "@/components/student/student-auth-context";
 
 function StudentLoginFormInner() {
   const router = useRouter();
@@ -209,14 +209,16 @@ function StudentLoginFormInner() {
 
 export function StudentLoginForm() {
   return (
-    <Suspense
-      fallback={
-        <div className="flex justify-center p-8">
-          <div className="h-6 w-6 animate-spin rounded-full border-2 border-[var(--color-text-primary)] border-t-transparent" />
-        </div>
-      }
-    >
-      <StudentLoginFormInner />
-    </Suspense>
+    <StudentAuthProvider>
+      <Suspense
+        fallback={
+          <div className="flex justify-center p-8">
+            <div className="h-6 w-6 animate-spin rounded-full border-2 border-[var(--color-text-primary)] border-t-transparent" />
+          </div>
+        }
+      >
+        <StudentLoginFormInner />
+      </Suspense>
+    </StudentAuthProvider>
   );
 }
