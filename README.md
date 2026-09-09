@@ -408,81 +408,101 @@ The data layer is managed with **Prisma ORM** connecting to PostgreSQL.
 Before setting up SkillBridge locally, ensure you have:
 - **Node.js:** `v18.18.0` or higher (tested on Node.js `v20+` and `v24+`).
 - **Package Manager:** `npm` (v9 or higher).
-- **Database:** PostgreSQL database instance (local PostgreSQL or a cloud instance such as [Neon](https://neon.tech)).
-- **Object Storage (Optional for file uploads):** [Supabase](https://supabase.com) project with a storage bucket named `skillbridge-files`.
+- **PostgreSQL Database:**
+  - **Option A (Recommended for Judges — Zero Local Installs):** A remote cloud PostgreSQL connection string (such as free [Neon](https://neon.tech), Supabase PostgreSQL, or one provided by the hackathon organizers).
+  - **Option B (Local Engine):** Local PostgreSQL service running on `localhost:5432` (note: fresh Windows laptops do not have PostgreSQL installed by default).
+- **Object Storage (Optional for file uploads):** [Supabase](https://supabase.com) project with a storage bucket named `skillbridge-files` (optional for general browsing and feature evaluation).
 
 ---
 
 ## 15. Installation & Setup
 
-1. **Clone the repository:**
-   ```bash
-   git clone https://github.com/Munikiran77/veda-26.git
-   cd veda-26
-   ```
+### 1. Clone the repository
+```bash
+git clone https://github.com/Munikiran77/veda-26.git
+cd veda-26
+```
 
-2. **Ensure you are on the integration branch:**
-   ```bash
-   git checkout integration
-   ```
+### 2. Ensure you are on the integration branch
+```bash
+git checkout integration
+```
 
-3. **Install dependencies:**
-   ```bash
-   npm install
-   ```
-   *(The `postinstall` script will automatically run `prisma generate`)*.
+### 3. Install dependencies
+```bash
+npm install
+```
+*(The `postinstall` hook automatically generates the Prisma Client via `prisma generate`).*
 
 ---
 
-## 16. Environment Variables
+## 16. Environment Variables & Database Configuration
 
-Create a `.env` file in the root directory by copying `.env.example`:
+Create your `.env` file in the root directory by copying the provided template:
 
 ```bash
 cp .env.example .env
 ```
 
-Configure the following environment variables:
+### Choosing Your Database Setup Path
 
-Example `.env` configuration with placeholders:
+Fresh machines (especially Windows laptops) do **not** come with PostgreSQL pre-installed, and command-line tools like `psql` will not be recognized. SkillBridge connects via Prisma ORM and works seamlessly with either of the following two paths:
 
+#### Option A: Remote PostgreSQL (Recommended for Judges — Zero Local Installs)
+Use a remote cloud PostgreSQL database (e.g. from [Neon](https://neon.tech), Supabase, or a connection string supplied by the project owner/organizers). **No local PostgreSQL installation or background database service is required.**
+
+Configure your `.env` file:
 ```env
-DATABASE_URL=your_database_url
-AUTH_SECRET=your_auth_secret
-SUPABASE_URL=your_supabase_url
-SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key
-APP_URL=http://localhost:3000
+DATABASE_URL="your_postgresql_connection_string"
+AUTH_SECRET="your_local_auth_secret_32_characters_minimum"
+SUPABASE_URL="your_supabase_url"
+SUPABASE_SERVICE_ROLE_KEY="your_supabase_service_role_key"
+APP_URL="http://localhost:3000"
 ```
+
+> **Security & Access Note:** To protect project security, actual production database connection strings and service role keys are intentionally excluded from the public repository. You can use any valid PostgreSQL connection string supplied by the team or spin up a free, instant serverless PostgreSQL database at [neon.tech](https://neon.tech) in 30 seconds.
+
+#### Option B: Local PostgreSQL Database
+If you already have PostgreSQL installed and running locally on your machine, create a database named `skillbridge` and configure your `.env`:
+```env
+DATABASE_URL="postgresql://postgres:postgres@localhost:5432/skillbridge?schema=public"
+AUTH_SECRET="your_local_auth_secret_32_characters_minimum"
+APP_URL="http://localhost:3000"
+```
+
+### Environment Variables Reference
 
 | Variable | Required | Description | Placeholder Value |
 | :--- | :---: | :--- | :--- |
-| `DATABASE_URL` | **Yes** | PostgreSQL connection string | `your_database_url` |
-| `AUTH_SECRET` | **Yes** | 32+ character secret for JWT signing | `your_auth_secret` |
+| `DATABASE_URL` | **Yes** | PostgreSQL connection string (Remote or Local) | `your_postgresql_connection_string` |
+| `AUTH_SECRET` | **Yes** | 32+ character secret for JWT cookie signing | `your_auth_secret` |
 | `SUPABASE_URL` | Optional | Supabase project URL for file storage | `your_supabase_url` |
 | `SUPABASE_SERVICE_ROLE_KEY` | Optional | Supabase service-role key for storage | `your_supabase_service_role_key` |
 | `APP_URL` | Optional | Application URL for CSRF validation | `http://localhost:3000` |
 
-> **Security Note:** Never commit `.env` to version control. `.env` is ignored in `.gitignore`.
-
 ---
 
-## 17. Database Setup
+## 17. Database Setup & Seeding
 
-1. **Generate Prisma Client:**
-   ```bash
-   npx prisma generate
-   ```
+Once your `DATABASE_URL` is configured in `.env`:
 
-2. **Push Schema to Database:**
-   ```bash
-   npx prisma db push
-   ```
+### 1. Push Database Schema
+Push the complete 17-model relational schema to your database without needing manual migrations:
+```bash
+npx prisma db push
+```
 
-3. **Seed Database with Sample Data:**
-   SkillBridge includes a comprehensive database seeder with mock students, clients, skills, and projects:
-   ```bash
-   npx prisma db seed
-   ```
+### 2. Seed Database with Demo Accounts & Projects
+SkillBridge includes an idempotent seeder (`prisma/seed.ts`) that automatically populates the database with demo students, clients, skills, open projects, proposals, and work contracts:
+```bash
+npx prisma db seed
+```
+
+**Seeded Demo Accounts for Immediate Evaluation:**
+- **Student Account:** `alex.johnson@university.edu` / `Student123!`
+- **Client Account:** `client@skillbridge.co` / `Client123!`
+
+*(You can also register brand new accounts through `/student/signup` and `/client/signup`).*
 
 ---
 
