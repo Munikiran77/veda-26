@@ -151,6 +151,7 @@ export function Navbar({ className }: NavbarProps) {
               <Link
                 key={item.href}
                 href={item.href}
+                prefetch={false}
                 className="text-[14px] font-medium text-[var(--color-text-secondary)] transition-colors duration-200 hover:text-[var(--color-text-primary)] focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-[var(--color-accent)] focus-visible:ring-offset-2 rounded-md px-1.5 py-1"
               >
                 {item.label}
@@ -293,6 +294,7 @@ export function Navbar({ className }: NavbarProps) {
                   <Link
                     key={item.href}
                     href={item.href}
+                    prefetch={false}
                     onClick={closeMobileMenu}
                     className="flex h-12 items-center rounded-lg px-3 text-[16px] font-medium text-[var(--color-text-primary)] transition-colors hover:bg-black/5 active:bg-black/10 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-[var(--color-accent)]"
                   >

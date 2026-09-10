@@ -73,6 +73,16 @@ export function ClientAuthProvider({
         setUser(null);
       }
     } catch {
+      // Retry once on transient network or cold-start error before failing
+      try {
+        const retryData = await apiClient.get<{ user: any }>("/api/auth/me");
+        if (retryData?.user && retryData.user.role === "CLIENT") {
+          setUser(formatClientUser(retryData.user));
+          return;
+        }
+      } catch {
+        // Conclude unauthenticated only if retry also fails
+      }
       setUser(null);
     } finally {
       setIsLoading(false);

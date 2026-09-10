@@ -20,7 +20,9 @@ export async function middleware(request: NextRequest) {
 
     const loginUrl = new URL("/client/login", request.url);
     loginUrl.searchParams.set("from", pathname);
-    return NextResponse.redirect(loginUrl);
+    const redirectRes = NextResponse.redirect(loginUrl);
+    redirectRes.headers.set("Cache-Control", "private, no-cache, no-store, max-age=0, must-revalidate");
+    return redirectRes;
   }
 
   // 2. Protect /student/* routes (exclude /student/login and /student/signup)
@@ -39,7 +41,9 @@ export async function middleware(request: NextRequest) {
 
     const loginUrl = new URL("/student/login", request.url);
     loginUrl.searchParams.set("from", pathname);
-    return NextResponse.redirect(loginUrl);
+    const redirectRes = NextResponse.redirect(loginUrl);
+    redirectRes.headers.set("Cache-Control", "private, no-cache, no-store, max-age=0, must-revalidate");
+    return redirectRes;
   }
 
   return NextResponse.next();

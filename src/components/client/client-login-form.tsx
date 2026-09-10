@@ -8,9 +8,25 @@ import { useClientAuth } from "@/components/client/client-auth-context";
 function LoginFormInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { user, login } = useClientAuth();
+  const { user, isLoading, login } = useClientAuth();
 
   const from = searchParams.get("from") || "/client/dashboard";
+
+  // Seamlessly auto-forward already authenticated clients to their intended destination
+  React.useEffect(() => {
+    if (!isLoading && user && user.role === "client") {
+      const target =
+        from &&
+        from.startsWith("/client") &&
+        from !== "/client/login" &&
+        from !== "/client/signup"
+          ? from
+          : null;
+      if (target) {
+        router.replace(target);
+      }
+    }
+  }, [user, isLoading, from, router]);
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -46,7 +62,8 @@ function LoginFormInner() {
 
     try {
       await login(cleanEmail, undefined, undefined, password);
-      router.push(from.startsWith("/client") ? from : "/client/dashboard");
+      router.refresh();
+      router.push(from.startsWith("/client") && from !== "/client/login" ? from : "/client/dashboard");
     } catch (err: any) {
       setError(err.message || "Unable to complete sign in. Please try again.");
       setIsSubmitting(false);
@@ -57,7 +74,8 @@ function LoginFormInner() {
     setIsSubmitting(true);
     try {
       await login("client@skillbridge.co", "Rishi Mamidanna", "Veda Studios", "Client123!");
-      router.push(from.startsWith("/client") ? from : "/client/dashboard");
+      router.refresh();
+      router.push(from.startsWith("/client") && from !== "/client/login" ? from : "/client/dashboard");
     } catch (err: any) {
       setError(err.message || "Unable to complete demo sign in.");
       setIsSubmitting(false);
@@ -104,10 +122,10 @@ function LoginFormInner() {
               </span>
             </div>
             <Link
-              href="/client/dashboard"
+              href={from && from.startsWith("/client") && from !== "/client/login" ? from : "/client/dashboard"}
               className="inline-flex h-8 items-center justify-center rounded-full bg-[var(--color-text-primary)] px-3.5 text-[12px] font-semibold text-white shadow-2xs hover:bg-black shrink-0 transition-all"
             >
-              Continue to Dashboard &rarr;
+              {from && from.startsWith("/client") && from !== "/client/login" && from !== "/client/dashboard" ? "Continue to Page →" : "Continue to Dashboard →"}
             </Link>
           </div>
         )}
