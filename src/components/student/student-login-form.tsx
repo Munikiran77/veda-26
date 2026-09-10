@@ -14,23 +14,21 @@ function StudentLoginFormInner() {
   const searchParams = useSearchParams();
   const { user, isLoading, login } = useStudentAuth();
 
-  const from = searchParams.get("from") || "/student";
+  const from = searchParams.get("from");
+  const target =
+    from &&
+    from.startsWith("/student") &&
+    from !== "/student/login" &&
+    from !== "/student/signup"
+      ? from
+      : "/student";
 
   // If already authenticated as a student, automatically proceed to target destination
   useEffect(() => {
     if (!isLoading && user && user.role === "student") {
-      const target =
-        from &&
-        from.startsWith("/student") &&
-        from !== "/student/login" &&
-        from !== "/student/signup"
-          ? from
-          : null;
-      if (target) {
-        router.replace(target);
-      }
+      router.replace(target);
     }
-  }, [user, isLoading, from, router]);
+  }, [user, isLoading, target, router]);
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -62,13 +60,6 @@ function StudentLoginFormInner() {
     try {
       await login(cleanEmail, password);
       router.refresh();
-      const target =
-        from &&
-        from.startsWith("/student") &&
-        from !== "/student/login" &&
-        from !== "/student/signup"
-          ? from
-          : "/student";
       router.push(target);
     } catch (err: any) {
       setError(err.message || "Unable to sign in. Please check credentials.");
@@ -82,19 +73,69 @@ function StudentLoginFormInner() {
     try {
       await login("alex.johnson@university.edu", "Student123!");
       router.refresh();
-      const target =
-        from &&
-        from.startsWith("/student") &&
-        from !== "/student/login" &&
-        from !== "/student/signup"
-          ? from
-          : "/student";
       router.push(target);
     } catch (err: any) {
       setError(err.message || "Unable to complete demo student sign in.");
       setIsSubmitting(false);
     }
   };
+
+  // If already authenticated or verifying session, show clean redirect/loading state without form or manual banner
+  if (isLoading || (user && user.role === "student")) {
+    return (
+      <div className="w-full max-w-md space-y-6">
+        {/* Brand & Eyebrow */}
+        <div className="text-center space-y-2">
+          <Link
+            href="/"
+            className="inline-flex items-center gap-2 group focus-visible:outline-hidden"
+          >
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[var(--color-text-primary)] text-white shadow-xs transition-transform group-hover:scale-105">
+              <span className="text-[14px] font-bold">SB</span>
+            </div>
+            <span className="text-xl font-semibold tracking-tight text-[var(--color-text-primary)]">
+              SkillBridge
+            </span>
+          </Link>
+
+          <div className="pt-2">
+            <span className="inline-flex items-center rounded-full bg-blue-500/10 px-3 py-1 text-[11px] font-semibold text-blue-600 uppercase tracking-wider">
+              Student Portal &bull; Role: Student
+            </span>
+            <h1 className="mt-2 text-2xl sm:text-3xl font-semibold tracking-tight text-[var(--color-text-primary)]">
+              {user ? "Redirecting to your workspace..." : "Verifying student session..."}
+            </h1>
+            <p className="mt-1 text-[14px] text-[var(--color-text-secondary)]">
+              {user
+                ? `Signed in as ${user.name || user.email}`
+                : "Checking authentication session..."}
+            </p>
+          </div>
+        </div>
+
+        {/* Redirecting card */}
+        <div className="rounded-2xl border border-[var(--color-border-subtle)] bg-[var(--color-canvas-bg)] p-8 shadow-2xs text-center space-y-4">
+          <div className="flex justify-center">
+            <div className="h-7 w-7 animate-spin rounded-full border-2 border-[var(--color-text-primary)] border-t-transparent" />
+          </div>
+          <p className="text-[13px] text-[var(--color-text-secondary)]">
+            {user
+              ? `Taking you directly to ${target === "/student/projects" ? "Find Projects" : "Student Dashboard"}...`
+              : "Please wait..."}
+          </p>
+        </div>
+
+        <div className="text-center">
+          <Link
+            href="/"
+            className="text-[12px] text-[var(--color-text-tertiary)] hover:text-[var(--color-text-primary)] transition-colors"
+          >
+            &larr; Back to SkillBridge Home
+          </Link>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="w-full max-w-md space-y-6">
@@ -127,22 +168,6 @@ function StudentLoginFormInner() {
 
       {/* Main Login Form Card */}
       <div className="rounded-2xl border border-[var(--color-border-subtle)] bg-[var(--color-canvas-bg)] p-6 sm:p-8 shadow-2xs space-y-5">
-        {user && user.role === "student" && (
-          <div className="rounded-xl border border-blue-500/20 bg-blue-500/5 p-3.5 flex items-center justify-between gap-3 text-[13px]">
-            <div className="flex items-center gap-2 truncate">
-              <span className="flex h-2 w-2 rounded-full bg-emerald-500 shrink-0" />
-              <span className="text-[var(--color-text-secondary)] truncate">
-                Signed in as <strong className="font-semibold text-[var(--color-text-primary)]">{user.name || user.email}</strong>
-              </span>
-            </div>
-            <Link
-              href={from && from.startsWith("/student") && from !== "/student/login" && from !== "/student/signup" ? from : "/student"}
-              className="inline-flex h-8 items-center justify-center rounded-full bg-[var(--color-text-primary)] px-3.5 text-[12px] font-semibold text-white shadow-2xs hover:bg-black shrink-0 transition-all"
-            >
-              {from && from.startsWith("/student") && from !== "/student/login" && from !== "/student/signup" && from !== "/student" ? "Continue to Page →" : "Continue to Dashboard →"}
-            </Link>
-          </div>
-        )}
 
         {error && (
           <div className="rounded-xl border border-red-200 bg-red-50 p-3.5 text-[13px] text-red-700 font-medium flex items-center justify-between">

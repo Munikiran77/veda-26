@@ -1,10 +1,12 @@
 "use client";
 
+import Link from "next/link";
 import { motion } from "framer-motion";
 import { ArrowRight } from "lucide-react";
 import { cn, formatINR } from "@/lib/utils";
 
 interface ProjectCardProps {
+  id?: string;
   title: string;
   budget: string;
   duration: string;
@@ -15,6 +17,7 @@ interface ProjectCardProps {
 }
 
 export function ProjectCard({
+  id,
   title,
   budget,
   duration,
@@ -71,10 +74,13 @@ export function ProjectCard({
       </div>
 
       {/* CTA */}
-      <button className="group/btn flex items-center gap-1.5 rounded-xl bg-[var(--color-canvas-surface)] px-4 py-2.5 text-sm font-medium text-[var(--color-text-primary)] hover:bg-[var(--color-text-primary)] hover:text-white transition-all self-start">
+      <Link
+        href={id ? `/student/projects/${id}` : "/student/projects"}
+        className="group/btn flex items-center gap-1.5 rounded-xl bg-[var(--color-canvas-surface)] px-4 py-2.5 text-sm font-medium text-[var(--color-text-primary)] hover:bg-[var(--color-text-primary)] hover:text-white transition-all self-start"
+      >
         View Project
         <ArrowRight size={14} className="transition-transform group-hover/btn:translate-x-0.5" />
-      </button>
+      </Link>
     </motion.div>
   );
 }
