@@ -26,9 +26,9 @@ function StudentLoginFormInner() {
   // If already authenticated as a student, automatically proceed to target destination
   useEffect(() => {
     if (!isLoading && user && user.role === "student") {
-      router.replace(target);
+      window.location.replace(target);
     }
-  }, [user, isLoading, target, router]);
+  }, [user, isLoading, target]);
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -59,8 +59,7 @@ function StudentLoginFormInner() {
 
     try {
       await login(cleanEmail, password);
-      router.refresh();
-      router.push(target);
+      window.location.href = target;
     } catch (err: any) {
       setError(err.message || "Unable to sign in. Please check credentials.");
       setIsSubmitting(false);
@@ -72,8 +71,7 @@ function StudentLoginFormInner() {
     setError(null);
     try {
       await login("alex.johnson@university.edu", "Student123!");
-      router.refresh();
-      router.push(target);
+      window.location.href = target;
     } catch (err: any) {
       setError(err.message || "Unable to complete demo student sign in.");
       setIsSubmitting(false);

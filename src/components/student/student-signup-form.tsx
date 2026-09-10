@@ -89,9 +89,9 @@ function StudentSignupFormInner() {
   // If already authenticated as a student, automatically proceed to destination
   useEffect(() => {
     if (!isLoading && user && user.role === "student") {
-      router.replace(target);
+      window.location.replace(target);
     }
-  }, [user, isLoading, target, router]);
+  }, [user, isLoading, target]);
 
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -145,8 +145,7 @@ function StudentSignupFormInner() {
 
     try {
       await signup(cleanName, cleanEmail, password, selectedInterests);
-      router.refresh();
-      router.push(target);
+      window.location.href = target;
     } catch (err: any) {
       setError(err.message || "Failed to create student account. Please try again.");
       setIsSubmitting(false);
