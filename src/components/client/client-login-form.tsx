@@ -63,7 +63,14 @@ function LoginFormInner() {
     try {
       await login(cleanEmail, undefined, undefined, password);
       router.refresh();
-      router.push(from.startsWith("/client") && from !== "/client/login" ? from : "/client/dashboard");
+      const target =
+        from &&
+        from.startsWith("/client") &&
+        from !== "/client/login" &&
+        from !== "/client/signup"
+          ? from
+          : "/client/dashboard";
+      router.push(target);
     } catch (err: any) {
       setError(err.message || "Unable to complete sign in. Please try again.");
       setIsSubmitting(false);
@@ -75,7 +82,14 @@ function LoginFormInner() {
     try {
       await login("client@skillbridge.co", "Rishi Mamidanna", "Veda Studios", "Client123!");
       router.refresh();
-      router.push(from.startsWith("/client") && from !== "/client/login" ? from : "/client/dashboard");
+      const target =
+        from &&
+        from.startsWith("/client") &&
+        from !== "/client/login" &&
+        from !== "/client/signup"
+          ? from
+          : "/client/dashboard";
+      router.push(target);
     } catch (err: any) {
       setError(err.message || "Unable to complete demo sign in.");
       setIsSubmitting(false);
@@ -221,7 +235,7 @@ function LoginFormInner() {
       <div className="text-center text-[13px] text-[var(--color-text-secondary)]">
         Don&apos;t have a client account?{" "}
         <Link
-          href={`/client/signup${from !== "/client/dashboard" ? `?from=${encodeURIComponent(from)}` : ""}`}
+          href={`/client/signup${from && from !== "/client/dashboard" && from !== "/client/login" && from !== "/client/signup" ? `?from=${encodeURIComponent(from)}` : ""}`}
           className="font-semibold text-[#0071e3] hover:underline"
         >
           Sign up as Client

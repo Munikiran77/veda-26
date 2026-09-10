@@ -8,9 +8,25 @@ import { useClientAuth } from "@/components/client/client-auth-context";
 function SignupFormInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { signup } = useClientAuth();
+  const { user, isLoading, signup } = useClientAuth();
 
   const from = searchParams.get("from") || "/client/dashboard";
+
+  // Seamlessly auto-forward already authenticated clients to their intended destination
+  React.useEffect(() => {
+    if (!isLoading && user && user.role === "client") {
+      const target =
+        from &&
+        from.startsWith("/client") &&
+        from !== "/client/login" &&
+        from !== "/client/signup"
+          ? from
+          : null;
+      if (target) {
+        router.replace(target);
+      }
+    }
+  }, [user, isLoading, from, router]);
 
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -44,7 +60,15 @@ function SignupFormInner() {
 
     try {
       await signup(cleanName, cleanEmail, company.trim(), password);
-      router.push(from.startsWith("/client") ? from : "/client/dashboard");
+      router.refresh();
+      const target =
+        from &&
+        from.startsWith("/client") &&
+        from !== "/client/login" &&
+        from !== "/client/signup"
+          ? from
+          : "/client/dashboard";
+      router.push(target);
     } catch (err: any) {
       setError(err.message || "Failed to create client account. Please try again.");
       setIsSubmitting(false);
@@ -82,6 +106,23 @@ function SignupFormInner() {
 
       {/* Main Signup Form Card */}
       <div className="rounded-2xl border border-[var(--color-border-subtle)] bg-[var(--color-canvas-bg)] p-6 sm:p-8 shadow-2xs space-y-5">
+        {user && user.role === "client" && (
+          <div className="rounded-xl border border-[#0071e3]/20 bg-[#0071e3]/5 p-3.5 flex items-center justify-between gap-3 text-[13px]">
+            <div className="flex items-center gap-2 truncate">
+              <span className="flex h-2 w-2 rounded-full bg-emerald-500 shrink-0" />
+              <span className="text-[var(--color-text-secondary)] truncate">
+                Signed in as <strong className="font-semibold text-[var(--color-text-primary)]">{user.name || user.email}</strong>
+              </span>
+            </div>
+            <Link
+              href={from && from.startsWith("/client") && from !== "/client/login" && from !== "/client/signup" ? from : "/client/dashboard"}
+              className="inline-flex h-8 items-center justify-center rounded-full bg-[var(--color-text-primary)] px-3.5 text-[12px] font-semibold text-white shadow-2xs hover:bg-black shrink-0 transition-all"
+            >
+              {from && from.startsWith("/client") && from !== "/client/login" && from !== "/client/signup" && from !== "/client/dashboard" ? "Continue to Page →" : "Continue to Dashboard →"}
+            </Link>
+          </div>
+        )}
+
         {error && (
           <div className="rounded-xl border border-red-200 bg-red-50 p-3.5 text-[13px] text-red-700 font-medium flex items-center justify-between">
             <span>{error}</span>
@@ -202,7 +243,7 @@ function SignupFormInner() {
       <div className="text-center text-[13px] text-[var(--color-text-secondary)]">
         Already have a client account?{" "}
         <Link
-          href={`/client/login${from !== "/client/dashboard" ? `?from=${encodeURIComponent(from)}` : ""}`}
+          href={`/client/login${from && from !== "/client/dashboard" && from !== "/client/signup" && from !== "/client/login" ? `?from=${encodeURIComponent(from)}` : ""}`}
           className="font-semibold text-[#0071e3] hover:underline"
         >
           Sign in

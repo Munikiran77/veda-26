@@ -58,6 +58,7 @@ export function Hero() {
             <motion.div {...reveal(0.29)} className="mt-8 flex w-full flex-col sm:w-auto sm:flex-row items-stretch sm:items-center gap-3 sm:gap-4">
               <MotionLink
                 href="/student/projects"
+                prefetch={false}
                 whileHover={reduced ? undefined : { y: -1 }}
                 whileTap={reduced ? undefined : { scale: 0.985 }}
                 className="group inline-flex h-12 items-center justify-center gap-2 rounded-full bg-[var(--color-text-primary)] px-7 text-[15px] font-medium text-white shadow-[0_1px_3px_rgba(0,0,0,0.08)] transition-all duration-200 ease-out hover:bg-black hover:shadow-[0_4px_14px_rgba(0,0,0,0.14)] focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-[var(--color-accent)] focus-visible:ring-offset-2 motion-safe:active:scale-[0.985]"

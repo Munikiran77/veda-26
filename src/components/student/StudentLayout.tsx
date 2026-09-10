@@ -30,7 +30,9 @@ function StudentLayoutInner({
 
   useEffect(() => {
     if (!isLoading && !user) {
-      router.replace(`/student/login?from=${encodeURIComponent(pathname || "/student")}`);
+      if (pathname !== "/student/login" && pathname !== "/student/signup") {
+        router.replace(`/student/login?from=${encodeURIComponent(pathname || "/student")}`);
+      }
     }
   }, [user, isLoading, router, pathname]);
 

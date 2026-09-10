@@ -82,7 +82,16 @@ function StudentSignupFormInner() {
   // If already authenticated as a student, automatically proceed to destination
   useEffect(() => {
     if (!isLoading && user && user.role === "student") {
-      router.replace(from.startsWith("/student") ? from : "/student");
+      const target =
+        from &&
+        from.startsWith("/student") &&
+        from !== "/student/login" &&
+        from !== "/student/signup"
+          ? from
+          : null;
+      if (target) {
+        router.replace(target);
+      }
     }
   }, [user, isLoading, from, router]);
 
@@ -138,7 +147,15 @@ function StudentSignupFormInner() {
 
     try {
       await signup(cleanName, cleanEmail, password, selectedInterests);
-      router.push(from.startsWith("/student") ? from : "/student");
+      router.refresh();
+      const target =
+        from &&
+        from.startsWith("/student") &&
+        from !== "/student/login" &&
+        from !== "/student/signup"
+          ? from
+          : "/student";
+      router.push(target);
     } catch (err: any) {
       setError(err.message || "Failed to create student account. Please try again.");
       setIsSubmitting(false);
@@ -185,10 +202,10 @@ function StudentSignupFormInner() {
               </span>
             </div>
             <Link
-              href="/student"
+              href={from && from.startsWith("/student") && from !== "/student/login" && from !== "/student/signup" ? from : "/student"}
               className="inline-flex h-8 items-center justify-center rounded-full bg-[var(--color-text-primary)] px-3.5 text-[12px] font-semibold text-white shadow-2xs hover:bg-black shrink-0 transition-all"
             >
-              Continue &rarr;
+              {from && from.startsWith("/student") && from !== "/student/login" && from !== "/student/signup" && from !== "/student" ? "Continue to Page →" : "Continue to Dashboard →"}
             </Link>
           </div>
         )}
@@ -391,7 +408,7 @@ function StudentSignupFormInner() {
       <div className="text-center text-[13px] text-[var(--color-text-secondary)]">
         Already have a student account?{" "}
         <Link
-          href={`/student/login${from !== "/student" ? `?from=${encodeURIComponent(from)}` : ""}`}
+          href={`/student/login${from && from !== "/student" && from !== "/student/signup" && from !== "/student/login" ? `?from=${encodeURIComponent(from)}` : ""}`}
           className="font-semibold text-blue-600 hover:underline"
         >
           Sign in

@@ -112,6 +112,7 @@ export function AuthRoleDropdown({
           <Link
             key={opt.role}
             href={opt.href}
+            prefetch={false}
             onClick={onClose}
             role="menuitem"
             className="group flex items-center justify-between rounded-xl p-2.5 text-left transition-all duration-150 hover:bg-[#f5f5f7] active:bg-[#ebebee] focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-[var(--color-accent)]"

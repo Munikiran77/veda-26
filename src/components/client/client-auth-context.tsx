@@ -151,6 +151,7 @@ export function ClientAuthProvider({
       // Ignore network errors on logout
     }
     setUser(null);
+    router.refresh();
     router.push("/client/login");
   }, [router]);
 

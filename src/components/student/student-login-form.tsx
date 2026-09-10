@@ -19,7 +19,16 @@ function StudentLoginFormInner() {
   // If already authenticated as a student, automatically proceed to target destination
   useEffect(() => {
     if (!isLoading && user && user.role === "student") {
-      router.replace(from.startsWith("/student") ? from : "/student");
+      const target =
+        from &&
+        from.startsWith("/student") &&
+        from !== "/student/login" &&
+        from !== "/student/signup"
+          ? from
+          : null;
+      if (target) {
+        router.replace(target);
+      }
     }
   }, [user, isLoading, from, router]);
 
@@ -52,7 +61,15 @@ function StudentLoginFormInner() {
 
     try {
       await login(cleanEmail, password);
-      router.push(from.startsWith("/student") ? from : "/student");
+      router.refresh();
+      const target =
+        from &&
+        from.startsWith("/student") &&
+        from !== "/student/login" &&
+        from !== "/student/signup"
+          ? from
+          : "/student";
+      router.push(target);
     } catch (err: any) {
       setError(err.message || "Unable to sign in. Please check credentials.");
       setIsSubmitting(false);
@@ -64,7 +81,15 @@ function StudentLoginFormInner() {
     setError(null);
     try {
       await login("alex.johnson@university.edu", "Student123!");
-      router.push(from.startsWith("/student") ? from : "/student");
+      router.refresh();
+      const target =
+        from &&
+        from.startsWith("/student") &&
+        from !== "/student/login" &&
+        from !== "/student/signup"
+          ? from
+          : "/student";
+      router.push(target);
     } catch (err: any) {
       setError(err.message || "Unable to complete demo student sign in.");
       setIsSubmitting(false);
@@ -111,10 +136,10 @@ function StudentLoginFormInner() {
               </span>
             </div>
             <Link
-              href="/student"
+              href={from && from.startsWith("/student") && from !== "/student/login" && from !== "/student/signup" ? from : "/student"}
               className="inline-flex h-8 items-center justify-center rounded-full bg-[var(--color-text-primary)] px-3.5 text-[12px] font-semibold text-white shadow-2xs hover:bg-black shrink-0 transition-all"
             >
-              Continue &rarr;
+              {from && from.startsWith("/student") && from !== "/student/login" && from !== "/student/signup" && from !== "/student" ? "Continue to Page →" : "Continue to Dashboard →"}
             </Link>
           </div>
         )}
@@ -210,7 +235,7 @@ function StudentLoginFormInner() {
       <div className="text-center text-[13px] text-[var(--color-text-secondary)]">
         Don&apos;t have an account?{" "}
         <Link
-          href={`/student/signup${from !== "/student" ? `?from=${encodeURIComponent(from)}` : ""}`}
+          href={`/student/signup${from && from !== "/student" && from !== "/student/login" && from !== "/student/signup" ? `?from=${encodeURIComponent(from)}` : ""}`}
           className="font-semibold text-blue-600 hover:underline"
         >
           Sign up

@@ -50,6 +50,7 @@ export function HeroCopy() {
       >
         <Link
           href="/student/projects"
+          prefetch={false}
           className="group flex items-center justify-center gap-2 rounded-full bg-[var(--color-text-primary)] px-8 py-3.5 text-sm font-medium text-[var(--color-canvas-bg)] hover:bg-[var(--color-text-secondary)] transition-colors w-full sm:w-auto"
         >
           Find Projects

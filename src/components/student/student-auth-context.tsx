@@ -83,6 +83,16 @@ export function StudentAuthProvider({
         setUser(null);
       }
     } catch {
+      // Retry once on transient network or cold-start error before failing
+      try {
+        const retryData = await apiClient.get<{ user: any }>("/api/auth/me");
+        if (retryData?.user && retryData.user.role === "STUDENT") {
+          setUser(formatStudentUser(retryData.user));
+          return;
+        }
+      } catch {
+        // Conclude unauthenticated only if retry also fails
+      }
       setUser(null);
     } finally {
       setIsLoading(false);
@@ -158,6 +168,7 @@ export function StudentAuthProvider({
       // Ignore network errors on logout
     }
     setUser(null);
+    router.refresh();
     router.push("/student/login");
   }, [router]);
 

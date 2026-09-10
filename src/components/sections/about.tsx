@@ -115,6 +115,7 @@ export function About() {
             <div className="pt-4 border-t border-[#14141e]/[0.06]">
               <Link
                 href="/student/projects"
+                prefetch={false}
                 className="group inline-flex items-center gap-2 text-[14px] font-semibold text-blue-600 hover:text-blue-700 transition-colors"
               >
                 <span>Find Student Projects</span>
@@ -177,6 +178,7 @@ export function About() {
             <div className="pt-4 border-t border-[#14141e]/[0.06]">
               <Link
                 href="/client/talent"
+                prefetch={false}
                 className="group inline-flex items-center gap-2 text-[14px] font-semibold text-purple-600 hover:text-purple-700 transition-colors"
               >
                 <span>Discover Student Talent</span>
