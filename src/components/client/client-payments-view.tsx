@@ -11,17 +11,22 @@ import {
   RefreshCw,
   Search,
   ShieldCheck,
+  ShieldAlert,
+  Scale,
   ArrowRight,
 } from "lucide-react";
 import { apiClient } from "@/lib/api-client";
 import { cn } from "@/lib/utils";
 import type { Payment, Escrow } from "@/types";
+import { OpenDisputeModal } from "./OpenDisputeModal";
+import { ResolveDisputeModal } from "./ResolveDisputeModal";
 
-type FilterTab = "ALL" | "HELD" | "RELEASED" | "REFUNDED";
+type FilterTab = "ALL" | "HELD" | "DISPUTED" | "RELEASED" | "REFUNDED";
 
 export function ClientPaymentsView() {
   const [payments, setPayments] = useState<Payment[]>([]);
   const [escrows, setEscrows] = useState<Escrow[]>([]);
+  const [disputes, setDisputes] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<FilterTab>("ALL");
@@ -29,16 +34,36 @@ export function ClientPaymentsView() {
   const [releasingId, setReleasingId] = useState<string | null>(null);
   const [actionSuccess, setActionSuccess] = useState<string | null>(null);
 
+  // Modals state
+  const [disputeModalTarget, setDisputeModalTarget] = useState<{
+    escrowId: string;
+    projectTitle: string;
+    studentName: string;
+    amount: number | string;
+  } | null>(null);
+
+  const [resolveModalTarget, setResolveModalTarget] = useState<{
+    disputeId: string;
+    projectTitle: string;
+    studentName: string;
+    amount: number | string;
+    reason: string;
+    description: string;
+    evidence?: string | null;
+  } | null>(null);
+
   const loadData = useCallback(async () => {
     try {
       setIsLoading(true);
       setError(null);
-      const [paymentsData, escrowsData] = await Promise.all([
+      const [paymentsData, escrowsData, disputesData] = await Promise.all([
         apiClient.get<Payment[]>("/api/payments").catch(() => []),
         apiClient.get<Escrow[]>("/api/escrows").catch(() => []),
+        apiClient.get<any[]>("/api/disputes").catch(() => []),
       ]);
       setPayments(Array.isArray(paymentsData) ? paymentsData : []);
       setEscrows(Array.isArray(escrowsData) ? escrowsData : []);
+      setDisputes(Array.isArray(disputesData) ? disputesData : []);
     } catch (err: any) {
       setError(err?.message || "Failed to load payments and escrow data");
     } finally {
@@ -76,12 +101,23 @@ export function ClientPaymentsView() {
     return map;
   }, [escrows]);
 
+  // Disputes map by escrowId
+  const disputeMap = useMemo(() => {
+    const map = new Map<string, any>();
+    disputes.forEach((d) => {
+      if (d.escrowId) map.set(d.escrowId, d);
+    });
+    return map;
+  }, [disputes]);
+
   // Unified payment/escrow records
   const records = useMemo(() => {
     return payments.map((p) => {
       const associatedEscrow = p.escrow || escrowMap.get(p.id) || null;
       const amountNum = typeof p.amount === "number" ? p.amount : parseFloat(String(p.amount)) || 0;
+      const associatedDispute = associatedEscrow ? disputeMap.get(associatedEscrow.id) : null;
       const escrowStatus = associatedEscrow?.status || (p.status === "SUCCEEDED" ? "RELEASED" : p.status);
+
       return {
         id: p.id,
         projectId: p.project?.id || p.projectId,
@@ -94,12 +130,16 @@ export function ClientPaymentsView() {
         paymentStatus: p.status,
         escrowId: associatedEscrow?.id || null,
         escrowStatus,
+        disputeId: associatedDispute?.id || null,
+        disputeReason: associatedDispute?.reason || null,
+        disputeDescription: associatedDispute?.description || null,
+        disputeEvidence: associatedDispute?.evidence || null,
         createdAt: p.createdAt,
         heldAt: associatedEscrow?.heldAt || p.createdAt,
         releasedAt: associatedEscrow?.releasedAt,
       };
     });
-  }, [payments, escrowMap]);
+  }, [payments, escrowMap, disputeMap]);
 
   // Metric computations from real records
   const stats = useMemo(() => {
@@ -107,12 +147,17 @@ export function ClientPaymentsView() {
     let heldInEscrow = 0;
     let releasedTotal = 0;
     let heldCount = 0;
+    let disputedCount = 0;
+    let disputedTotal = 0;
 
     records.forEach((r) => {
       totalFunded += r.amount;
       if (r.escrowStatus === "HELD") {
         heldInEscrow += r.amount;
         heldCount += 1;
+      } else if (r.escrowStatus === "DISPUTED") {
+        disputedCount += 1;
+        disputedTotal += r.amount;
       } else if (r.escrowStatus === "RELEASED" || r.paymentStatus === "SUCCEEDED") {
         releasedTotal += r.amount;
       }
@@ -123,6 +168,8 @@ export function ClientPaymentsView() {
       heldInEscrow,
       releasedTotal,
       heldCount,
+      disputedCount,
+      disputedTotal,
       totalCount: records.length,
     };
   }, [records]);
@@ -132,6 +179,7 @@ export function ClientPaymentsView() {
     return records.filter((r) => {
       // Tab filter
       if (activeTab === "HELD" && r.escrowStatus !== "HELD") return false;
+      if (activeTab === "DISPUTED" && r.escrowStatus !== "DISPUTED") return false;
       if (activeTab === "RELEASED" && r.escrowStatus !== "RELEASED") return false;
       if (activeTab === "REFUNDED" && r.escrowStatus !== "REFUNDED" && r.paymentStatus !== "REFUNDED") return false;
 
@@ -152,6 +200,13 @@ export function ClientPaymentsView() {
   };
 
   const getStatusBadge = (escrowStatus: string, paymentStatus: string) => {
+    if (escrowStatus === "DISPUTED") {
+      return (
+        <span className="inline-flex items-center gap-1.5 rounded-full border border-rose-200 bg-rose-50 px-2.5 py-0.5 text-xs font-semibold text-rose-700">
+          <ShieldAlert size={12} /> Disputed
+        </span>
+      );
+    }
     if (escrowStatus === "HELD") {
       return (
         <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-200 bg-amber-50 px-2.5 py-0.5 text-xs font-semibold text-amber-700">
@@ -238,7 +293,7 @@ export function ClientPaymentsView() {
             Payments & Escrow
           </h1>
           <p className="text-sm text-[var(--color-text-secondary)] mt-0.5">
-            Manage funded project escrows, release milestone payments, and track transaction history.
+            Manage funded project escrows, release milestone payments, and resolve disputes.
           </p>
         </div>
 
@@ -295,6 +350,23 @@ export function ClientPaymentsView() {
         </div>
 
         <div className="rounded-2xl border border-[var(--color-border-subtle)] bg-white p-5 shadow-2xs">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-medium text-[var(--color-text-secondary)]">Disputed Funds</span>
+            {stats.disputedCount > 0 && (
+              <span className="inline-flex items-center gap-1 text-[11px] font-medium text-rose-600 bg-rose-50 px-2 py-0.5 rounded-full">
+                <ShieldAlert size={12} /> Active
+              </span>
+            )}
+          </div>
+          <div className="mt-2 flex items-baseline gap-1.5">
+            <span className="text-2xl font-bold text-rose-600">
+              {formatCurrency(stats.disputedTotal)}
+            </span>
+          </div>
+          <p className="mt-1 text-xs text-[var(--color-text-tertiary)]">{stats.disputedCount} dispute{stats.disputedCount !== 1 ? "s" : ""} in arbitration</p>
+        </div>
+
+        <div className="rounded-2xl border border-[var(--color-border-subtle)] bg-white p-5 shadow-2xs">
           <span className="text-xs font-medium text-[var(--color-text-secondary)]">Released to Students</span>
           <div className="mt-2 flex items-baseline gap-1.5">
             <span className="text-2xl font-bold text-emerald-600">
@@ -302,15 +374,6 @@ export function ClientPaymentsView() {
             </span>
           </div>
           <p className="mt-1 text-xs text-[var(--color-text-tertiary)]">Successfully paid out</p>
-        </div>
-
-        <div className="rounded-2xl border border-[var(--color-border-subtle)] bg-white p-5 shadow-2xs">
-          <span className="text-xs font-medium text-[var(--color-text-secondary)]">Payment Security</span>
-          <div className="mt-2 flex items-center gap-2">
-            <ShieldCheck size={24} className="text-blue-600" />
-            <span className="text-base font-semibold text-[var(--color-text-primary)]">100% Escrow</span>
-          </div>
-          <p className="mt-1 text-xs text-[var(--color-text-tertiary)]">Funds held until deliverables approved</p>
         </div>
       </div>
 
@@ -322,6 +385,7 @@ export function ClientPaymentsView() {
             [
               { id: "ALL", label: "All Transactions" },
               { id: "HELD", label: `In Escrow (${stats.heldCount})` },
+              { id: "DISPUTED", label: `Disputed (${stats.disputedCount})` },
               { id: "RELEASED", label: "Released" },
               { id: "REFUNDED", label: "Refunded" },
             ] as const
@@ -361,12 +425,12 @@ export function ClientPaymentsView() {
             <IndianRupee size={28} />
           </div>
           <h3 className="text-base font-bold text-[var(--color-text-primary)]">
-            {searchQuery ? "No matching transactions" : "No payment transactions yet"}
+            {searchQuery ? "No matching transactions" : "No payment transactions in this category"}
           </h3>
           <p className="text-xs text-[var(--color-text-secondary)] max-w-sm mt-1 mb-5 leading-relaxed">
             {searchQuery
               ? "Try adjusting your search keywords or filter tab."
-              : "When you hire students and fund project milestones through SkillBridge Escrow, all your transaction details and payment releases will appear here."}
+              : "When you hire students and fund project milestones through SkillBridge Escrow, all transaction details and disputes appear here."}
           </p>
           {!searchQuery && (
             <Link
@@ -398,7 +462,7 @@ export function ClientPaymentsView() {
                     >
                       {item.projectTitle}
                     </Link>
-                    <div className="flex items-center gap-2 mt-0.5 text-xs text-[var(--color-text-secondary)]">
+                    <div className="flex items-center gap-2 mt-0.5 text-xs text-[var(--color-text-secondary)] flex-wrap">
                       <span>Student: <strong className="font-semibold text-[var(--color-text-primary)]">{item.studentName}</strong></span>
                       <span>&bull;</span>
                       <span>
@@ -408,12 +472,17 @@ export function ClientPaymentsView() {
                           year: "numeric",
                         })}
                       </span>
+                      {item.escrowStatus === "DISPUTED" && item.disputeReason && (
+                        <span className="text-rose-600 font-medium">
+                          &bull; Reason: {item.disputeReason}
+                        </span>
+                      )}
                     </div>
                   </div>
                 </div>
 
                 {/* Right: Amount, Status & Actions */}
-                <div className="flex items-center justify-between gap-4 sm:justify-end">
+                <div className="flex items-center justify-between gap-3 sm:justify-end flex-wrap">
                   <div className="text-right">
                     <p className="text-base font-bold text-[var(--color-text-primary)]">
                       {formatCurrency(item.amount)}
@@ -423,24 +492,64 @@ export function ClientPaymentsView() {
                     </div>
                   </div>
 
+                  {/* Actions for HELD escrow */}
                   {item.escrowStatus === "HELD" && item.escrowId && (
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        disabled={releasingId === item.escrowId}
+                        onClick={() => handleReleaseEscrow(item.escrowId!)}
+                        className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-600 px-3.5 py-2 text-xs font-semibold text-white shadow-xs hover:bg-emerald-700 disabled:opacity-50 transition-colors shrink-0"
+                      >
+                        {releasingId === item.escrowId ? (
+                          <>
+                            <Loader2 size={13} className="animate-spin" />
+                            Releasing...
+                          </>
+                        ) : (
+                          <>
+                            <CheckCircle2 size={13} />
+                            Release Funds
+                          </>
+                        )}
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setDisputeModalTarget({
+                            escrowId: item.escrowId!,
+                            projectTitle: item.projectTitle,
+                            studentName: item.studentName,
+                            amount: item.amount,
+                          })
+                        }
+                        className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-700 hover:bg-rose-100 transition-colors shrink-0"
+                      >
+                        Open Dispute
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Actions for DISPUTED escrow */}
+                  {item.escrowStatus === "DISPUTED" && (
                     <button
                       type="button"
-                      disabled={releasingId === item.escrowId}
-                      onClick={() => handleReleaseEscrow(item.escrowId!)}
-                      className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-600 px-3.5 py-2 text-xs font-semibold text-white shadow-xs hover:bg-emerald-700 disabled:opacity-50 transition-colors shrink-0"
+                      onClick={() =>
+                        setResolveModalTarget({
+                          disputeId: item.disputeId || "",
+                          projectTitle: item.projectTitle,
+                          studentName: item.studentName,
+                          amount: item.amount,
+                          reason: item.disputeReason || "Deliverables disputed",
+                          description: item.disputeDescription || "Work deliverable dispute opened by client.",
+                          evidence: item.disputeEvidence,
+                        })
+                      }
+                      className="inline-flex items-center gap-1.5 rounded-xl bg-purple-600 px-3.5 py-2 text-xs font-semibold text-white shadow-xs hover:bg-purple-700 transition-colors shrink-0"
                     >
-                      {releasingId === item.escrowId ? (
-                        <>
-                          <Loader2 size={13} className="animate-spin" />
-                          Releasing...
-                        </>
-                      ) : (
-                        <>
-                          <CheckCircle2 size={13} />
-                          Release Funds
-                        </>
-                      )}
+                      <Scale size={13} />
+                      Resolve Dispute (Arbiter)
                     </button>
                   )}
                 </div>
@@ -448,6 +557,41 @@ export function ClientPaymentsView() {
             ))}
           </div>
         </div>
+      )}
+
+      {/* Open Dispute Modal */}
+      {disputeModalTarget && (
+        <OpenDisputeModal
+          isOpen={Boolean(disputeModalTarget)}
+          onClose={() => setDisputeModalTarget(null)}
+          escrowId={disputeModalTarget.escrowId}
+          projectTitle={disputeModalTarget.projectTitle}
+          studentName={disputeModalTarget.studentName}
+          amount={disputeModalTarget.amount}
+          onSuccess={() => {
+            setActionSuccess("Dispute opened. Escrow status updated to Disputed.");
+            loadData();
+          }}
+        />
+      )}
+
+      {/* Resolve Dispute Modal */}
+      {resolveModalTarget && (
+        <ResolveDisputeModal
+          isOpen={Boolean(resolveModalTarget)}
+          onClose={() => setResolveModalTarget(null)}
+          disputeId={resolveModalTarget.disputeId}
+          projectTitle={resolveModalTarget.projectTitle}
+          studentName={resolveModalTarget.studentName}
+          amount={resolveModalTarget.amount}
+          reason={resolveModalTarget.reason}
+          description={resolveModalTarget.description}
+          evidence={resolveModalTarget.evidence}
+          onSuccess={(msg) => {
+            setActionSuccess(msg);
+            loadData();
+          }}
+        />
       )}
     </div>
   );

@@ -160,6 +160,30 @@ export default function WorkspacePage({ params }: WorkspacePageProps) {
           </div>
         ) : (
           <div className="mb-8 rounded-2xl border border-[var(--color-border-subtle)] bg-white p-6 shadow-sm sm:p-8">
+            {work.escrow?.status === "DISPUTED" && (
+              <div className="mb-6 rounded-2xl border border-amber-300 bg-gradient-to-r from-amber-50 to-orange-50 p-4 sm:p-5 shadow-xs">
+                <div className="flex items-start gap-3">
+                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-amber-500 text-white font-black text-base">
+                    !
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-bold text-amber-900">
+                      Escrow Payment in Dispute
+                    </h3>
+                    <p className="text-xs text-amber-700 mt-1 leading-relaxed">
+                      The client has raised an inquiry regarding the project deliverables. Escrow funds ({formatINR(work.escrow.amount || project.budget)}) are securely held while SkillBridge Arbitration reviews the submissions.
+                    </p>
+                    {work.escrow.dispute?.reason && (
+                      <div className="mt-2.5 rounded-lg bg-white/90 p-2.5 text-xs text-amber-900 border border-amber-200">
+                        <span className="font-semibold">Reason: </span>
+                        {work.escrow.dispute.reason} {work.escrow.dispute.description && `— "${work.escrow.dispute.description}"`}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+
             <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between border-b border-[var(--color-border-subtle)] pb-6">
               <div>
                 <h1 className="mb-2 text-2xl font-bold text-[var(--color-text-primary)]">

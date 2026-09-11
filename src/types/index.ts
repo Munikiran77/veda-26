@@ -207,6 +207,7 @@ export interface WorkProject {
   rating?: number;
   review?: string;
   earnings?: string;
+  escrow?: any;
 }
 
 // ─── Profile Types ───────────────────────────────────────────────────────────
@@ -270,6 +271,8 @@ export interface StudentProfile {
     category: string;
     score: number;
   }[];
+  rawSkills?: StudentSkillItem[];
+  passport?: LivingSkillPassportData;
   
   // Experience & Education
   experience: Experience[];
@@ -377,7 +380,13 @@ export type EscrowStatus =
   | "HELD"
   | "RELEASED"
   | "REFUNDED"
-  | "CANCELLED";
+  | "CANCELLED"
+  | "DISPUTED";
+
+export type DisputeStatus =
+  | "OPEN"
+  | "RESOLVED_STUDENT"
+  | "RESOLVED_CLIENT";
 
 export type TransactionType =
   | "PAYMENT"
@@ -427,6 +436,91 @@ export interface Escrow {
   refundedAt?: string | null;
   createdAt: string;
   updatedAt: string;
+  dispute?: Dispute | null;
+}
+
+export interface Review {
+  id: string;
+  workContractId: string;
+  projectId: string;
+  clientId: string;
+  studentId: string;
+  rating: number;
+  qualityRating?: number | null;
+  communicationRating?: number | null;
+  timelinessRating?: number | null;
+  professionalismRating?: number | null;
+  comment: string;
+  verifiedSkills: string[];
+  createdAt: string;
+  updatedAt?: string;
+  client?: {
+    id: string;
+    companyName: string;
+    user?: { name: string; avatar?: string | null };
+  };
+  project?: {
+    id: string;
+    title: string;
+  };
+}
+
+export type SkillVerificationLevel = "Self-Reported" | "Project Verified" | "Mastery";
+
+export interface StudentSkillItem {
+  id: string;
+  name: string;
+  proficiency: string;
+  isVerified: boolean;
+  score: number;
+  verificationLevel: SkillVerificationLevel;
+  projectsCompletedCount: number;
+  recentGrowth: number;
+}
+
+export interface LivingSkillPassportData {
+  overallScore: number;
+  verifiedSkillsCount: number;
+  totalSkillsCount: number;
+  projectsCompleted: number;
+  averageRating: number;
+  skills: StudentSkillItem[];
+  scoreBreakdown: {
+    projectPerformance: number; // 40%
+    clientRating: number;       // 30%
+    skillAssessment: number;    // 20%
+    evidenceFactor: number;     // 10%
+  };
+}
+
+export interface Dispute {
+  id: string;
+  escrowId: string;
+  workContractId: string;
+  openedById: string;
+  reason: string;
+  description: string;
+  evidence?: string | null;
+  status: DisputeStatus;
+  resolutionNote?: string | null;
+  resolvedAt?: string | null;
+  createdAt: string;
+  updatedAt: string;
+  escrow?: Escrow;
+  workContract?: {
+    id: string;
+    projectId: string;
+    studentId: string;
+    clientId: string;
+    project?: { title: string };
+    student?: { user?: { name: string } };
+    client?: { companyName: string };
+  };
+  openedBy?: {
+    id: string;
+    name: string;
+    role: string;
+  };
 }
 
 export interface StudentWallet {

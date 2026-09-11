@@ -16,7 +16,8 @@ const VALID_PAYMENT_TRANSITIONS: Record<PaymentStatus, readonly PaymentStatus[]>
  * Valid transitions for EscrowStatus
  */
 const VALID_ESCROW_TRANSITIONS: Record<EscrowStatus, readonly EscrowStatus[]> = {
-  HELD: [EscrowStatus.RELEASED, EscrowStatus.REFUNDED, EscrowStatus.CANCELLED],
+  HELD: [EscrowStatus.RELEASED, EscrowStatus.REFUNDED, EscrowStatus.CANCELLED, EscrowStatus.DISPUTED],
+  DISPUTED: [EscrowStatus.RELEASED, EscrowStatus.REFUNDED],
   RELEASED: [],
   REFUNDED: [],
   CANCELLED: [],
@@ -31,10 +32,14 @@ export function isValidEscrowTransition(current: EscrowStatus, target: EscrowSta
 }
 
 export function canReleaseEscrow(status: EscrowStatus): boolean {
-  return status === EscrowStatus.HELD;
+  return status === EscrowStatus.HELD || status === EscrowStatus.DISPUTED;
 }
 
 export function canRefundEscrow(status: EscrowStatus): boolean {
+  return status === EscrowStatus.HELD || status === EscrowStatus.DISPUTED;
+}
+
+export function canDisputeEscrow(status: EscrowStatus): boolean {
   return status === EscrowStatus.HELD;
 }
 

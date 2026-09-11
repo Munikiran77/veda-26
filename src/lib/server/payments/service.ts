@@ -352,13 +352,13 @@ export async function releaseEscrow(escrowId: string, auth: AuthenticatedUser) {
         throw new Error("ALREADY_RELEASED");
       }
 
-      if (escrow.status !== EscrowStatus.HELD) {
+      if (escrow.status !== EscrowStatus.HELD && escrow.status !== EscrowStatus.DISPUTED) {
         throw new Error("INVALID_ESCROW_STATUS");
       }
 
-      // 1. Atomic conditional update: only update if status is still HELD
+      // 1. Atomic conditional update: update if status is HELD or DISPUTED
       const updateCount = await tx.escrow.updateMany({
-        where: { id: escrow.id, status: EscrowStatus.HELD },
+        where: { id: escrow.id, status: { in: [EscrowStatus.HELD, EscrowStatus.DISPUTED] } },
         data: {
           status: EscrowStatus.RELEASED,
           releasedAt: new Date(),
@@ -515,7 +515,7 @@ export async function refundEscrow(
         throw new Error("ALREADY_REFUNDED");
       }
 
-      if (escrow.status !== EscrowStatus.HELD) {
+      if (escrow.status !== EscrowStatus.HELD && escrow.status !== EscrowStatus.DISPUTED) {
         throw new Error("INVALID_ESCROW_STATUS");
       }
 
@@ -529,9 +529,9 @@ export async function refundEscrow(
         throw new Error("REFUND_PROVIDER_FAILED");
       }
 
-      // 1. Atomic conditional update: only update if status is still HELD
+      // 1. Atomic conditional update: update if status is HELD or DISPUTED
       const updateCount = await tx.escrow.updateMany({
-        where: { id: escrow.id, status: EscrowStatus.HELD },
+        where: { id: escrow.id, status: { in: [EscrowStatus.HELD, EscrowStatus.DISPUTED] } },
         data: {
           status: EscrowStatus.REFUNDED,
           refundedAt: new Date(),

@@ -16,6 +16,7 @@ import {
   EditProfileModal,
   AddPortfolioModal,
   ShareProfileModal,
+  LivingSkillPassport,
 } from "@/components/student/profile";
 import { useStudentAuth } from "@/components/student/student-auth-context";
 import { apiClient } from "@/lib/api-client";
@@ -72,22 +73,50 @@ function StudentProfileContent() {
     }
   }, []);
 
+  const [dbReviews, setDbReviews] = useState<any[]>([]);
+
+  const loadReviews = useCallback(async () => {
+    try {
+      const res = await apiClient.get<any[]>(`/api/reviews?studentId=${studentTargetId}`);
+      if (Array.isArray(res)) {
+        setDbReviews(res);
+      }
+    } catch (err: any) {
+      console.warn("Could not load reviews from API:", err?.message);
+    }
+  }, [studentTargetId]);
+
   useEffect(() => {
     if (!isAuthLoading) {
       loadProfile();
       loadWorkContracts();
+      loadReviews();
     }
-  }, [isAuthLoading, loadProfile, loadWorkContracts]);
+  }, [isAuthLoading, loadProfile, loadWorkContracts, loadReviews]);
 
-  // SkillBridge reviews: extract from real completed projects if any exist
-  const reviews = completedProjects
-    .filter((w) => Boolean(w.review && w.rating))
-    .map((w) => ({
-      id: w.id,
-      rating: w.rating!,
-      review: w.review!,
-      client: typeof w.project.client === "string" ? w.project.client : "Client",
-    }));
+  // SkillBridge reviews: format from DB reviews if available, or fall back to completed contracts
+  const allReviews = dbReviews.length > 0
+    ? dbReviews.map((r) => ({
+        id: r.id,
+        rating: r.rating,
+        review: r.comment,
+        client: r.client?.companyName || "Verified Client",
+        projectTitle: r.project?.title,
+        verifiedSkills: r.verifiedSkills || [],
+        qualityRating: r.qualityRating,
+        communicationRating: r.communicationRating,
+        timelinessRating: r.timelinessRating,
+        professionalismRating: r.professionalismRating,
+      }))
+    : completedProjects
+        .filter((w) => Boolean(w.review && w.rating))
+        .map((w) => ({
+          id: w.id,
+          rating: w.rating!,
+          review: w.review!,
+          client: typeof w.project.client === "string" ? w.project.client : "Client",
+          projectTitle: w.project.title,
+        }));
 
   const handleToggleVisibility = async () => {
     if (!profile || isVisibilitySaving) return;
@@ -189,6 +218,9 @@ function StudentProfileContent() {
           />
           <ProfileStats stats={profile.stats} />
 
+          {/* Living Skill Passport Feature 1 Showcase */}
+          <LivingSkillPassport passport={profile.passport} skills={profile.rawSkills} />
+
           <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
             {/* Main Column */}
             <div className="lg:col-span-2">
@@ -204,7 +236,7 @@ function StudentProfileContent() {
 
               <SkillBridgeProjects projects={completedProjects} />
 
-              <ClientReviews reviews={reviews} />
+              <ClientReviews reviews={allReviews} />
             </div>
 
             {/* Right Sidebar Column */}

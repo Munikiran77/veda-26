@@ -359,6 +359,10 @@ export function TalentDirectory() {
 
                 {/* Experience Tier & Expertise Category */}
                 <div className="flex flex-wrap items-center gap-2 text-[11px]">
+                  <span className="inline-flex items-center gap-1 rounded-lg bg-blue-50 border border-blue-200/80 px-2 py-0.5 font-bold text-blue-700">
+                    <svg className="h-3 w-3 text-blue-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                    Skill Passport: {(student as any).passportScore || 85}
+                  </span>
                   <span className="rounded-lg bg-[var(--color-canvas-surface)] border border-[var(--color-border-subtle)] px-2 py-0.5 font-medium text-[var(--color-text-secondary)]">
                     {student.expertise}
                   </span>

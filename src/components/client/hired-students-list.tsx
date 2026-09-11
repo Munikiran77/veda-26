@@ -4,6 +4,9 @@ import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { apiClient } from "@/lib/api-client";
 import { formatPrismaProjectStatus } from "@/lib/api-mappers";
+import { ReviewStudentModal } from "./ReviewStudentModal";
+import { OpenDisputeModal } from "./OpenDisputeModal";
+import { Star, ShieldAlert, CheckCircle2, Clock } from "lucide-react";
 
 interface HiredStudentViewItem {
   id: string;
@@ -11,12 +14,16 @@ interface HiredStudentViewItem {
   avatarInitials: string;
   headline: string;
   college: string;
+  projectId: string;
   projectTitle: string;
   projectStatus: string;
+  workStatus: string;
   proposal?: string;
   appliedAt?: string;
   skills: string[];
   studentProfileId?: string;
+  hasReview?: boolean;
+  reviewRating?: number;
   escrow?: {
     id: string;
     status: string;
@@ -29,6 +36,10 @@ export function HiredStudentsList() {
   const [isLoading, setIsLoading] = useState(true);
   const [actionLoadingId, setActionLoadingId] = useState<string | null>(null);
   const [actionMessage, setActionMessage] = useState<string | null>(null);
+
+  // Modals state
+  const [reviewModalTarget, setReviewModalTarget] = useState<HiredStudentViewItem | null>(null);
+  const [disputeModalTarget, setDisputeModalTarget] = useState<HiredStudentViewItem | null>(null);
 
   async function loadHired() {
     try {
@@ -70,12 +81,16 @@ export function HiredStudentsList() {
             avatarInitials,
             headline: contract.student?.headline || "Student Builder",
             college: contract.student?.college || "University",
+            projectId: contract.projectId,
             projectTitle: contract.project?.title || `Project #${contract.projectId}`,
             projectStatus: formatPrismaProjectStatus(contract.project?.status),
+            workStatus: contract.status || "IN_PROGRESS",
             proposal: contract.application?.proposal,
             appliedAt: contract.application?.appliedAt,
             skills,
             studentProfileId: contract.student?.id,
+            hasReview: Boolean(contract.review),
+            reviewRating: contract.review?.rating,
             escrow: existingEscrow
               ? {
                   id: existingEscrow.id,
@@ -126,6 +141,11 @@ export function HiredStudentsList() {
     }
   }
 
+  const formatAmount = (val: number | string) => {
+    const num = typeof val === "number" ? val : parseFloat(String(val)) || 0;
+    return `₹${num.toLocaleString("en-IN")}`;
+  };
+
   const totalHired = hiredList.length;
 
   return (
@@ -171,7 +191,7 @@ export function HiredStudentsList() {
           <span className="font-bold uppercase tracking-wider text-[10px] bg-blue-100 text-blue-800 px-2 py-0.5 rounded-md">
             Demo Payment
           </span>
-          <span>Demo Payment — No real money is charged. Demo Escrow — No real funds are held.</span>
+          <span>Demo Payment — No real money is charged. Demo Escrow secured in ₹ (INR).</span>
         </div>
         {actionMessage && (
           <span className="font-semibold text-emerald-700">{actionMessage}</span>
@@ -210,119 +230,209 @@ export function HiredStudentsList() {
         </div>
       ) : (
         <div className="space-y-4">
-          {hiredList.map((item) => (
-            <div
-              key={item.id}
-              className="rounded-2xl border border-[var(--color-border-subtle)] bg-white p-6 shadow-sm hover:shadow-md transition-shadow"
-            >
-              <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-                {/* Student Info */}
-                <div className="flex items-start gap-4">
-                  <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-[var(--color-accent)]/10 text-sm font-bold text-[var(--color-accent)]">
-                    {item.avatarInitials}
-                  </div>
-                  <div>
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <h3 className="font-semibold text-[var(--color-text-primary)]">
-                        {item.studentName}
-                      </h3>
-                      <span className="inline-flex items-center rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-medium text-emerald-700 border border-emerald-100">
-                        Contract Active
-                      </span>
-                    </div>
-                    <p className="text-sm text-[var(--color-text-secondary)] mt-0.5">
-                      {item.headline}
-                    </p>
-                    <p className="text-xs text-[var(--color-text-secondary)] mt-0.5">
-                      {item.college}
-                    </p>
-                  </div>
-                </div>
+          {hiredList.map((item) => {
+            const isAwaitingReview = item.workStatus === "AWAITING_REVIEW";
+            const isCompleted = item.workStatus === "COMPLETED";
+            const isDisputed = item.escrow?.status === "DISPUTED";
+            const isHeld = item.escrow?.status === "HELD";
 
-                {/* Actions */}
-                <div className="flex items-center gap-2 shrink-0 flex-wrap">
-                  {/* Escrow Status & Action */}
-                  {!item.escrow ? (
-                    <button
-                      type="button"
-                      disabled={actionLoadingId === item.id}
-                      onClick={() => handleFundEscrow(item.id)}
-                      className="rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-emerald-700 disabled:opacity-50 transition-colors shadow-sm"
-                    >
-                      {actionLoadingId === item.id ? "Funding..." : "Fund Escrow (Demo)"}
-                    </button>
-                  ) : item.escrow.status === "HELD" ? (
-                    <div className="flex items-center gap-2">
-                      <span className="inline-flex items-center rounded-full bg-amber-50 px-2.5 py-1 text-xs font-medium text-amber-700 border border-amber-200">
-                        Escrow: ${parseFloat(String(item.escrow.amount)).toFixed(2)} (Held)
-                      </span>
+            return (
+              <div
+                key={item.id}
+                className="rounded-2xl border border-[var(--color-border-subtle)] bg-white p-6 shadow-sm hover:shadow-md transition-shadow"
+              >
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                  {/* Student Info */}
+                  <div className="flex items-start gap-4">
+                    <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-[var(--color-accent)]/10 text-sm font-bold text-[var(--color-accent)]">
+                      {item.avatarInitials}
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <h3 className="font-semibold text-[var(--color-text-primary)]">
+                          {item.studentName}
+                        </h3>
+                        {isDisputed ? (
+                          <span className="inline-flex items-center gap-1 rounded-full bg-rose-50 px-2.5 py-0.5 text-xs font-semibold text-rose-700 border border-rose-200">
+                            <ShieldAlert size={12} />
+                            Escrow Disputed
+                          </span>
+                        ) : isCompleted ? (
+                          <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-semibold text-emerald-700 border border-emerald-100">
+                            <CheckCircle2 size={12} />
+                            Completed
+                          </span>
+                        ) : isAwaitingReview ? (
+                          <span className="inline-flex items-center gap-1 rounded-full bg-purple-50 px-2.5 py-0.5 text-xs font-semibold text-purple-700 border border-purple-200">
+                            <Clock size={12} />
+                            Awaiting Your Review
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center rounded-full bg-blue-50 px-2.5 py-0.5 text-xs font-medium text-blue-700 border border-blue-100">
+                            Contract Active
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-sm text-[var(--color-text-secondary)] mt-0.5">
+                        {item.headline}
+                      </p>
+                      <p className="text-xs text-[var(--color-text-secondary)] mt-0.5">
+                        {item.college}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Actions */}
+                  <div className="flex items-center gap-2 shrink-0 flex-wrap">
+                    {/* Feature 1: Review & Rate action button when AWAITING_REVIEW or COMPLETED without review */}
+                    {isAwaitingReview && (
                       <button
                         type="button"
-                        disabled={actionLoadingId === item.escrow.id}
-                        onClick={() => handleReleaseEscrow(item.escrow!.id)}
-                        className="rounded-lg bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-indigo-700 disabled:opacity-50 transition-colors shadow-sm"
+                        onClick={() => setReviewModalTarget(item)}
+                        className="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-3.5 py-1.5 text-xs font-semibold text-white hover:bg-blue-700 transition-colors shadow-xs"
                       >
-                        {actionLoadingId === item.escrow.id ? "Releasing..." : "Release Escrow (Demo)"}
+                        <Star size={13} className="fill-white" />
+                        Review &amp; Rate Student
                       </button>
-                    </div>
-                  ) : (
-                    <span className="inline-flex items-center rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-700 border border-emerald-200">
-                      Escrow Released (${parseFloat(String(item.escrow.amount)).toFixed(2)})
-                    </span>
-                  )}
+                    )}
 
-                  <Link
-                    href="/client/projects"
-                    className="rounded-lg bg-[var(--color-text-primary)] px-3 py-1.5 text-xs font-semibold text-white hover:bg-black transition-colors"
-                  >
-                    View Projects
-                  </Link>
-                </div>
-              </div>
+                    {isCompleted && item.hasReview && (
+                      <span className="inline-flex items-center gap-1 rounded-lg bg-amber-50 px-2.5 py-1 text-xs font-medium text-amber-700 border border-amber-200">
+                        <Star size={12} className="fill-amber-400 text-amber-400" />
+                        Reviewed ({item.reviewRating}★)
+                      </span>
+                    )}
 
-              {/* Project + Skills */}
-              <div className="mt-4 border-t border-[var(--color-border-subtle)] pt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                <div>
-                  <p className="text-xs text-[var(--color-text-secondary)] font-medium">Working on</p>
-                  <p className="text-sm font-semibold text-[var(--color-text-primary)] mt-0.5">
-                    {item.projectTitle}
-                  </p>
-                  <p className="text-xs text-[var(--color-text-secondary)] mt-0.5">
-                    Status: <span className="font-medium text-[var(--color-text-primary)]">{item.projectStatus}</span>
-                  </p>
-                </div>
+                    {/* Escrow Status & Action */}
+                    {!item.escrow ? (
+                      <button
+                        type="button"
+                        disabled={actionLoadingId === item.id}
+                        onClick={() => handleFundEscrow(item.id)}
+                        className="rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-emerald-700 disabled:opacity-50 transition-colors shadow-xs"
+                      >
+                        {actionLoadingId === item.id ? "Funding..." : "Fund Escrow (Demo)"}
+                      </button>
+                    ) : isDisputed ? (
+                      <span className="inline-flex items-center gap-1 rounded-full bg-rose-50 px-2.5 py-1 text-xs font-semibold text-rose-700 border border-rose-200">
+                        <ShieldAlert size={12} />
+                        Dispute Active ({formatAmount(item.escrow.amount)})
+                      </span>
+                    ) : isHeld ? (
+                      <div className="flex items-center gap-2">
+                        <span className="inline-flex items-center rounded-full bg-amber-50 px-2.5 py-1 text-xs font-medium text-amber-700 border border-amber-200">
+                          Escrow: {formatAmount(item.escrow.amount)} (Held)
+                        </span>
 
-                <div className="flex flex-wrap gap-1.5">
-                  {(item.skills || []).slice(0, 4).map((skill: string) => (
-                    <span
-                      key={skill}
-                      className="rounded-lg bg-[var(--color-canvas-surface)] border border-[var(--color-border-subtle)] px-2 py-0.5 text-xs font-medium text-[var(--color-text-primary)]"
+                        <button
+                          type="button"
+                          disabled={actionLoadingId === item.escrow.id}
+                          onClick={() => handleReleaseEscrow(item.escrow!.id)}
+                          className="rounded-lg bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-indigo-700 disabled:opacity-50 transition-colors shadow-xs"
+                        >
+                          {actionLoadingId === item.escrow.id ? "Releasing..." : "Release Escrow"}
+                        </button>
+
+                        {/* Feature 2: Open Dispute button */}
+                        <button
+                          type="button"
+                          onClick={() => setDisputeModalTarget(item)}
+                          className="rounded-lg border border-rose-200 bg-rose-50 px-2.5 py-1.5 text-xs font-semibold text-rose-700 hover:bg-rose-100 transition-colors"
+                        >
+                          Open Dispute
+                        </button>
+                      </div>
+                    ) : (
+                      <span className="inline-flex items-center rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-700 border border-emerald-200">
+                        Escrow Released ({formatAmount(item.escrow.amount)})
+                      </span>
+                    )}
+
+                    <Link
+                      href="/client/projects"
+                      className="rounded-lg bg-[var(--color-text-primary)] px-3 py-1.5 text-xs font-semibold text-white hover:bg-black transition-colors"
                     >
-                      {skill}
-                    </span>
-                  ))}
+                      View Projects
+                    </Link>
+                  </div>
                 </div>
+
+                {/* Project + Skills */}
+                <div className="mt-4 border-t border-[var(--color-border-subtle)] pt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <p className="text-xs text-[var(--color-text-secondary)] font-medium">Working on</p>
+                    <p className="text-sm font-semibold text-[var(--color-text-primary)] mt-0.5">
+                      {item.projectTitle}
+                    </p>
+                    <p className="text-xs text-[var(--color-text-secondary)] mt-0.5">
+                      Status: <span className="font-medium text-[var(--color-text-primary)]">{item.projectStatus}</span>
+                    </p>
+                  </div>
+
+                  <div className="flex flex-wrap gap-1.5">
+                    {(item.skills || []).slice(0, 4).map((skill: string) => (
+                      <span
+                        key={skill}
+                        className="rounded-lg bg-[var(--color-canvas-surface)] border border-[var(--color-border-subtle)] px-2 py-0.5 text-xs font-medium text-[var(--color-text-primary)]"
+                      >
+                        {skill}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Proposal summary */}
+                {item.proposal && (
+                  <div className="mt-3">
+                    <p className="text-xs text-[var(--color-text-secondary)] line-clamp-2">
+                      &ldquo;{item.proposal}&rdquo;
+                    </p>
+                  </div>
+                )}
+
+                {/* Meta */}
+                <p className="mt-2 text-xs text-[var(--color-text-secondary)]">
+                  Contract started:{" "}
+                  <span className="font-medium text-[var(--color-text-primary)]">
+                    {item.appliedAt ? new Date(item.appliedAt).toLocaleDateString() : "Active"}
+                  </span>
+                </p>
               </div>
-
-              {/* Proposal summary */}
-              {item.proposal && (
-                <div className="mt-3">
-                  <p className="text-xs text-[var(--color-text-secondary)] line-clamp-2">
-                    &ldquo;{item.proposal}&rdquo;
-                  </p>
-                </div>
-              )}
-
-              {/* Meta */}
-              <p className="mt-2 text-xs text-[var(--color-text-secondary)]">
-                Contract started:{" "}
-                <span className="font-medium text-[var(--color-text-primary)]">
-                  {item.appliedAt ? new Date(item.appliedAt).toLocaleDateString() : "Active"}
-                </span>
-              </p>
-            </div>
-          ))}
+            );
+          })}
         </div>
+      )}
+
+      {/* Review & Rate Modal */}
+      {reviewModalTarget && (
+        <ReviewStudentModal
+          isOpen={Boolean(reviewModalTarget)}
+          onClose={() => setReviewModalTarget(null)}
+          contractId={reviewModalTarget.id}
+          studentName={reviewModalTarget.studentName}
+          projectTitle={reviewModalTarget.projectTitle}
+          projectSkills={reviewModalTarget.skills}
+          onSuccess={() => {
+            setActionMessage("Review submitted and skills verified!");
+            loadHired();
+          }}
+        />
+      )}
+
+      {/* Open Dispute Modal */}
+      {disputeModalTarget && disputeModalTarget.escrow && (
+        <OpenDisputeModal
+          isOpen={Boolean(disputeModalTarget)}
+          onClose={() => setDisputeModalTarget(null)}
+          escrowId={disputeModalTarget.escrow.id}
+          projectTitle={disputeModalTarget.projectTitle}
+          studentName={disputeModalTarget.studentName}
+          amount={disputeModalTarget.escrow.amount}
+          onSuccess={() => {
+            setActionMessage("Dispute filed. Escrow locked in dispute.");
+            loadHired();
+          }}
+        />
       )}
     </div>
   );

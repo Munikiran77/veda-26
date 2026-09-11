@@ -231,6 +231,7 @@ export function mapWorkContract(
       },
     ],
     project,
+    escrow: dbContract.escrow || null,
   };
 }
 
@@ -281,6 +282,8 @@ export function mapTalentStudent(dbStudent: any) {
     joinedDate: dbStudent.createdAt
       ? new Date(dbStudent.createdAt).toLocaleDateString("en-US", { month: "short", year: "numeric" })
       : "Aug 2026",
+    passportScore: dbStudent.passport?.overallScore ?? 85,
+    verifiedSkillsCount: dbStudent.passport?.verifiedSkillsCount ?? 3,
   };
 }
 
@@ -370,5 +373,7 @@ export function mapStudentProfile(dbStudent: any) {
       clientRating: dbStudent.stats?.clientRating ?? 4.9,
       profileViews: dbStudent.stats?.profileViews ?? 124,
     },
+    rawSkills: dbStudent.skills || [],
+    passport: dbStudent.passport || null,
   };
 }

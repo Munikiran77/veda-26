@@ -145,20 +145,33 @@ export function SkillBridgeProjects({ projects }: { projects: (WorkProject & { p
   );
 }
 
-export function ClientReviews({ reviews }: { reviews: { id: string; rating: number; review: string; client: string }[] }) {
+export interface ClientReviewItem {
+  id: string;
+  rating: number;
+  review: string;
+  client: string;
+  projectTitle?: string;
+  verifiedSkills?: string[];
+  qualityRating?: number | null;
+  communicationRating?: number | null;
+  timelinessRating?: number | null;
+  professionalismRating?: number | null;
+}
+
+export function ClientReviews({ reviews }: { reviews: ClientReviewItem[] }) {
   if (reviews.length === 0) {
     return (
       <div className="mb-12">
         <div className="mb-4">
-          <h2 className="text-xl font-bold text-[var(--color-text-primary)]">Client Reviews</h2>
+          <h2 className="text-xl font-bold text-[var(--color-text-primary)]">Client Reviews & Evidence</h2>
           <p className="text-sm text-[var(--color-text-secondary)] mt-1">
-            Feedback from clients on completed projects.
+            Feedback and skills verified by clients on completed projects.
           </p>
         </div>
         <div className="rounded-2xl border border-dashed border-[var(--color-border-subtle)] bg-[var(--color-canvas-bg)] p-8 text-center">
           <p className="text-sm font-medium text-[var(--color-text-secondary)]">No reviews yet</p>
           <p className="text-xs text-[var(--color-text-tertiary)] mt-1">
-            Client reviews and ratings will appear here once you complete projects.
+            Client reviews and verified skills will appear here once you complete projects.
           </p>
         </div>
       </div>
@@ -171,9 +184,9 @@ export function ClientReviews({ reviews }: { reviews: { id: string; rating: numb
     <div className="mb-12">
       <div className="mb-6 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
         <div>
-          <h2 className="text-xl font-bold text-[var(--color-text-primary)]">Client Reviews</h2>
+          <h2 className="text-xl font-bold text-[var(--color-text-primary)]">Client Reviews & Evidence</h2>
           <p className="text-sm text-[var(--color-text-secondary)] mt-1">
-            Feedback from clients on completed projects.
+            Verified proof of delivery from real-world SkillBridge engagements.
           </p>
         </div>
         <div className="flex items-center gap-3 rounded-xl bg-[var(--color-canvas-surface)] px-4 py-2 border border-[var(--color-border-subtle)]">
@@ -187,17 +200,52 @@ export function ClientReviews({ reviews }: { reviews: { id: string; rating: numb
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {reviews.map((rev) => (
-          <div key={rev.id} className="rounded-2xl border border-[var(--color-border-subtle)] bg-white p-6 shadow-sm">
-            <div className="mb-3 flex items-center gap-1 text-sm font-bold text-yellow-600">
-              {Array.from({ length: 5 }).map((_, i) => (
-                <Star key={i} size={14} className={i < Math.floor(rev.rating) ? "fill-current" : "text-gray-300"} />
-              ))}
-              <span className="ml-1 text-[var(--color-text-primary)]">{rev.rating}</span>
+          <div key={rev.id} className="rounded-2xl border border-[var(--color-border-subtle)] bg-white p-6 shadow-sm flex flex-col">
+            <div className="mb-2 flex items-center justify-between">
+              <div className="flex items-center gap-1 text-sm font-bold text-yellow-500">
+                {Array.from({ length: 5 }).map((_, i) => (
+                  <Star key={i} size={14} className={i < Math.floor(rev.rating) ? "fill-current" : "text-gray-300"} />
+                ))}
+                <span className="ml-1 text-[var(--color-text-primary)]">{rev.rating}.0</span>
+              </div>
+              {rev.projectTitle && (
+                <span className="text-[11px] font-medium text-gray-500 truncate max-w-[160px]">
+                  {rev.projectTitle}
+                </span>
+              )}
             </div>
-            <p className="mb-4 text-sm italic leading-relaxed text-gray-700">
+
+            <p className="mb-4 text-sm italic leading-relaxed text-gray-700 flex-1">
               &quot;{rev.review}&quot;
             </p>
-            <p className="text-xs font-semibold uppercase tracking-wider text-[var(--color-text-tertiary)]">
+
+            {/* Verified Skills from this Project */}
+            {rev.verifiedSkills && rev.verifiedSkills.length > 0 && (
+              <div className="mb-3 rounded-xl bg-emerald-50/70 p-2.5 border border-emerald-100">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-800 block mb-1">
+                  Skills Verified in this Project:
+                </span>
+                <div className="flex flex-wrap gap-1.5">
+                  {rev.verifiedSkills.map((sk) => (
+                    <span key={sk} className="inline-flex items-center gap-1 rounded-md bg-white px-2 py-0.5 text-[11px] font-bold text-emerald-700 border border-emerald-200 shadow-2xs">
+                      <span>✓</span> {sk}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Dimensional Ratings Breakdown if available */}
+            {(rev.qualityRating || rev.communicationRating || rev.timelinessRating || rev.professionalismRating) && (
+              <div className="mb-3 flex flex-wrap gap-2 text-[10px] font-semibold text-gray-500 bg-gray-50 p-2 rounded-lg border border-gray-100">
+                {rev.qualityRating && <span>Quality: <strong className="text-gray-800">{rev.qualityRating}★</strong></span>}
+                {rev.communicationRating && <span>Comm: <strong className="text-gray-800">{rev.communicationRating}★</strong></span>}
+                {rev.timelinessRating && <span>Time: <strong className="text-gray-800">{rev.timelinessRating}★</strong></span>}
+                {rev.professionalismRating && <span>Prof: <strong className="text-gray-800">{rev.professionalismRating}★</strong></span>}
+              </div>
+            )}
+
+            <p className="text-xs font-semibold uppercase tracking-wider text-[var(--color-text-tertiary)] mt-auto pt-2 border-t border-gray-100">
               — {rev.client}
             </p>
           </div>

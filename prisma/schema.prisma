@@ -60,6 +60,13 @@ enum EscrowStatus {
   RELEASED
   REFUNDED
   CANCELLED
+  DISPUTED
+}
+
+enum DisputeStatus {
+  OPEN
+  RESOLVED_STUDENT
+  RESOLVED_CLIENT
 }
 
 enum TransactionType {
@@ -88,6 +95,7 @@ model User {
   messages       Message[]
   storedFiles    StoredFile[]
   paymentTransactions PaymentTransaction[]
+  openedDisputes Dispute[]       @relation("DisputeOpener")
 
   @@index([email])
   @@index([role])
@@ -119,6 +127,7 @@ model StudentProfile {
   conversations     Conversation[]
   payments          Payment[]
   wallet            StudentWallet?
+  reviews           Review[]
 
   @@index([userId])
 }
@@ -143,6 +152,7 @@ model ClientProfile {
   workContracts       WorkContract[]
   conversations       Conversation[]
   payments            Payment[]
+  reviews             Review[]
 
   @@index([userId])
 }
@@ -167,6 +177,11 @@ model StudentSkill {
   skillId          String
   skill            Skill             @relation(fields: [skillId], references: [id], onDelete: Cascade)
   proficiency      SkillProficiency? @default(INTERMEDIATE)
+  isVerified       Boolean           @default(false)
+  score            Int               @default(70)
+  verificationLevel String           @default("Self-Reported")
+  projectsCompletedCount Int           @default(0)
+  recentGrowth     Int               @default(0)
 
   @@unique([studentId, skillId])
   @@index([studentId])
@@ -233,6 +248,7 @@ model Project {
   workContracts    WorkContract[]
   conversations    Conversation[]
   payments         Payment[]
+  reviews          Review[]
 
   @@index([clientId])
   @@index([status])
@@ -288,6 +304,8 @@ model WorkContract {
 
   payments      Payment[]
   escrow        Escrow?
+  review        Review?
+  disputes      Dispute[]
 
   @@index([projectId])
   @@index([studentId])
@@ -421,6 +439,8 @@ model Escrow {
   createdAt      DateTime      @default(now())
   updatedAt      DateTime      @updatedAt
 
+  dispute        Dispute?
+
   @@index([status])
 }
 
@@ -458,5 +478,63 @@ model PaymentTransaction {
   @@index([paymentId])
   @@index([type])
   @@index([createdAt])
+}
+
+// ─── Reviews & Ratings (Feature 1) ──────────────────────────────────────────
+
+model Review {
+  id                  String         @id @default(cuid())
+  workContractId      String         @unique
+  workContract        WorkContract   @relation(fields: [workContractId], references: [id], onDelete: Cascade)
+  
+  projectId           String
+  project             Project        @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  clientId            String
+  client              ClientProfile  @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  studentId           String
+  student             StudentProfile @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  
+  rating              Int
+  qualityRating       Int?
+  communicationRating Int?
+  timelinessRating    Int?
+  professionalismRating Int?
+  comment             String
+  verifiedSkills      String[]
+  
+  createdAt           DateTime       @default(now())
+  updatedAt           DateTime       @updatedAt
+
+  @@index([studentId])
+  @@index([clientId])
+  @@index([projectId])
+}
+
+// ─── Disputes & Arbitration (Feature 2) ─────────────────────────────────────
+
+model Dispute {
+  id             String        @id @default(cuid())
+  escrowId       String        @unique
+  escrow         Escrow        @relation(fields: [escrowId], references: [id], onDelete: Cascade)
+  workContractId String
+  workContract   WorkContract  @relation(fields: [workContractId], references: [id], onDelete: Cascade)
+  
+  openedById     String
+  openedBy       User          @relation("DisputeOpener", fields: [openedById], references: [id], onDelete: Restrict)
+  
+  reason         String
+  description    String
+  evidence       String?
+  
+  status         DisputeStatus @default(OPEN)
+  resolutionNote String?
+  resolvedAt     DateTime?
+  
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  @@index([escrowId])
+  @@index([workContractId])
+  @@index([status])
 }
 

@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { UserRole } from "@prisma/client";
 import { AuthenticatedUser } from "../auth/context";
+import { computeSkillPassport } from "@/lib/skill-passport";
 
 export interface ListStudentsQuery {
   search?: string;
@@ -73,6 +74,11 @@ function sanitizeStudent(dbStudent: any, isOwner: boolean = false) {
           id: s.skill?.id || s.id,
           name: s.skill?.name || s.name,
           proficiency: s.proficiency || "INTERMEDIATE",
+          isVerified: Boolean(s.isVerified),
+          score: typeof s.score === "number" && s.score > 0 ? s.score : (s.isVerified ? 88 : 72),
+          verificationLevel: s.verificationLevel || (s.isVerified ? "Project Verified" : "Self-Reported"),
+          projectsCompletedCount: s.projectsCompletedCount ?? (s.isVerified ? 1 : 0),
+          recentGrowth: s.recentGrowth ?? (s.isVerified ? 8 : 0),
         }))
       : [],
     portfolio: Array.isArray(dbStudent.portfolio)
@@ -85,10 +91,18 @@ function sanitizeStudent(dbStudent: any, isOwner: boolean = false) {
           imageUrl: p.imageUrl || null,
         }))
       : [],
+    passport: computeSkillPassport({
+      skills: dbStudent.skills || [],
+      workContracts: dbStudent.workContracts || [],
+      reviews: dbStudent.reviews || [],
+      portfolio: dbStudent.portfolio || [],
+    }),
     stats: {
       projectsCompleted: dbStudent.workContracts ? dbStudent.workContracts.filter((w: any) => w.status === "COMPLETED").length : 0,
       projectsInProgress: dbStudent.workContracts ? dbStudent.workContracts.filter((w: any) => w.status === "IN_PROGRESS").length : 0,
-      clientRating: 4.9,
+      clientRating: Array.isArray(dbStudent.reviews) && dbStudent.reviews.length > 0
+        ? Number((dbStudent.reviews.reduce((acc: number, r: any) => acc + r.rating, 0) / dbStudent.reviews.length).toFixed(1))
+        : 5.0,
       profileViews: 128,
     },
   };
@@ -148,6 +162,7 @@ export async function listStudents(query: ListStudentsQuery = {}) {
       },
       portfolio: true,
       workContracts: true,
+      reviews: true,
     },
     orderBy: {
       createdAt: "desc",
@@ -196,6 +211,7 @@ export async function getStudentById(id: string, auth?: AuthenticatedUser | null
       },
       portfolio: true,
       workContracts: true,
+      reviews: true,
     },
   });
 
