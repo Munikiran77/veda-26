@@ -296,9 +296,15 @@ export async function createContractPayment(
  * Releases held escrow funds to the student.
  * Only the owning Client can release escrow funds.
  */
-export async function releaseEscrow(escrowId: string, auth: AuthenticatedUser) {
-  if (auth.role !== UserRole.CLIENT || !auth.clientProfile) {
-    return { error: "FORBIDDEN" as const, message: "Only clients can release escrow" };
+export async function releaseEscrow(
+  escrowId: string,
+  auth: AuthenticatedUser,
+  options?: { asArbiter?: boolean }
+) {
+  if (!options?.asArbiter) {
+    if (auth.role !== UserRole.CLIENT || !auth.clientProfile) {
+      return { error: "FORBIDDEN" as const, message: "Only clients can release escrow" };
+    }
   }
 
   if (!escrowId?.trim()) {
@@ -323,7 +329,7 @@ export async function releaseEscrow(escrowId: string, auth: AuthenticatedUser) {
     return { error: "NOT_FOUND" as const, message: "Escrow record not found" };
   }
 
-  if (initialEscrow.workContract.clientId !== auth.clientProfile.id) {
+  if (!options?.asArbiter && initialEscrow.workContract.clientId !== auth.clientProfile?.id) {
     return { error: "FORBIDDEN" as const, message: "You do not own this contract" };
   }
 
@@ -456,10 +462,13 @@ export async function releaseEscrow(escrowId: string, auth: AuthenticatedUser) {
 export async function refundEscrow(
   escrowId: string,
   auth: AuthenticatedUser,
-  reason?: string
+  reason?: string,
+  options?: { asArbiter?: boolean }
 ) {
-  if (auth.role !== UserRole.CLIENT || !auth.clientProfile) {
-    return { error: "FORBIDDEN" as const, message: "Only clients can request a refund" };
+  if (!options?.asArbiter) {
+    if (auth.role !== UserRole.CLIENT || !auth.clientProfile) {
+      return { error: "FORBIDDEN" as const, message: "Only clients can request a refund" };
+    }
   }
 
   if (!escrowId?.trim()) {
@@ -483,7 +492,7 @@ export async function refundEscrow(
     return { error: "NOT_FOUND" as const, message: "Escrow record not found" };
   }
 
-  if (initialEscrow.workContract.clientId !== auth.clientProfile.id) {
+  if (!options?.asArbiter && initialEscrow.workContract.clientId !== auth.clientProfile?.id) {
     return { error: "FORBIDDEN" as const, message: "You do not own this contract" };
   }
 

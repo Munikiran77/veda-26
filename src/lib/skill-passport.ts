@@ -128,7 +128,7 @@ export function computeSkillPassport(input: SkillPassportInput): LivingSkillPass
       score: Math.min(100, Math.max(0, score)),
       verificationLevel,
       projectsCompletedCount,
-      recentGrowth: s.recentGrowth ?? (isVerified ? 8 : 0),
+      recentGrowth: typeof s.recentGrowth === "number" ? s.recentGrowth : 0,
     };
   });
 
@@ -174,8 +174,9 @@ export function calculateSkillUpdateOnReview(params: {
   // Bonus for completed projects (+4 per verified project up to +12)
   const projectBonus = Math.min(12, newProjectsCount * 4);
 
-  const calculatedNewScore = Math.min(100, Math.max(75, baseScore + ratingBonus + projectBonus));
-  const recentGrowth = Math.max(1, calculatedNewScore - (currentScore > 0 ? currentScore : 70));
+  const calculatedNewScore = Math.min(100, Math.max(0, baseScore + ratingBonus + projectBonus));
+  const previousScore = typeof currentScore === "number" && !isNaN(currentScore) ? currentScore : 70;
+  const recentGrowth = calculatedNewScore - previousScore;
 
   let verificationLevel: SkillVerificationLevel = "Project Verified";
   if (newProjectsCount >= 2 && calculatedNewScore >= 90) {

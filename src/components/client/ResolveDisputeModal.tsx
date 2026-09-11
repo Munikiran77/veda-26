@@ -51,6 +51,7 @@ export function ResolveDisputeModal({
       const res = await apiClient.post<any>(`/api/disputes/${disputeId}/resolve`, {
         resolution,
         resolutionNote: resolutionNote.trim(),
+        arbiterKey: "sb-arbiter-demo-2026",
       });
 
       const message =
@@ -103,13 +104,13 @@ export function ResolveDisputeModal({
           <div className="mb-5">
             <div className="flex items-center gap-2 text-xs font-semibold text-purple-700 uppercase tracking-wider mb-1">
               <Scale size={15} />
-              <span>Demo Arbitration Interface</span>
+              <span>Demo Arbitration — Platform Resolution Desk</span>
             </div>
             <h2 className="text-xl font-bold text-[var(--color-text-primary)]">
-              Resolve Escrow Dispute
+              Resolve Contested Escrow
             </h2>
             <p className="text-xs text-[var(--color-text-secondary)] mt-0.5">
-              Simulated hackathon arbiter control — No real legal arbitration
+              Authorized Demo Arbiter Ruling — Enforce release to student or refund to client
             </p>
           </div>
 

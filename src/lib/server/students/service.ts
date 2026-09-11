@@ -78,7 +78,7 @@ function sanitizeStudent(dbStudent: any, isOwner: boolean = false) {
           score: typeof s.score === "number" && s.score > 0 ? s.score : (s.isVerified ? 88 : 72),
           verificationLevel: s.verificationLevel || (s.isVerified ? "Project Verified" : "Self-Reported"),
           projectsCompletedCount: s.projectsCompletedCount ?? (s.isVerified ? 1 : 0),
-          recentGrowth: s.recentGrowth ?? (s.isVerified ? 8 : 0),
+          recentGrowth: typeof s.recentGrowth === "number" ? s.recentGrowth : 0,
         }))
       : [],
     portfolio: Array.isArray(dbStudent.portfolio)

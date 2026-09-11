@@ -52,6 +52,8 @@ export function ClientPaymentsView() {
     evidence?: string | null;
   } | null>(null);
 
+  const [isDemoArbiterActive, setIsDemoArbiterActive] = useState(false);
+
   const loadData = useCallback(async () => {
     try {
       setIsLoading(true);
@@ -203,7 +205,7 @@ export function ClientPaymentsView() {
     if (escrowStatus === "DISPUTED") {
       return (
         <span className="inline-flex items-center gap-1.5 rounded-full border border-rose-200 bg-rose-50 px-2.5 py-0.5 text-xs font-semibold text-rose-700">
-          <ShieldAlert size={12} /> Disputed
+          <ShieldAlert size={12} /> Dispute Raised
         </span>
       );
     }
@@ -373,9 +375,50 @@ export function ClientPaymentsView() {
               {formatCurrency(stats.releasedTotal)}
             </span>
           </div>
-          <p className="mt-1 text-xs text-[var(--color-text-tertiary)]">Successfully paid out</p>
         </div>
       </div>
+
+      {/* Demo Arbitration Desk Banner */}
+      {stats.disputedCount > 0 && (
+        <div className="rounded-2xl border border-purple-200 bg-gradient-to-r from-purple-50/90 to-indigo-50/70 p-4 sm:p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-2xs">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-purple-600 text-white shadow-xs">
+              <Scale size={20} />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h4 className="text-xs font-bold uppercase tracking-wider text-purple-900">
+                  Demo Arbitration Desk
+                </h4>
+                <span className={cn(
+                  "rounded-full px-2 py-0.5 text-[10px] font-bold",
+                  isDemoArbiterActive ? "bg-purple-200 text-purple-800" : "bg-gray-200 text-gray-700"
+                )}>
+                  {isDemoArbiterActive ? "Arbiter Mode: Active" : "Client View: Normal"}
+                </span>
+              </div>
+              <p className="text-xs text-purple-800 mt-0.5 max-w-xl">
+                {isDemoArbiterActive
+                  ? "Platform arbitration authority enabled. You can now adjudicate active disputes to release funds to the student or refund the client."
+                  : "Hiring clients cannot self-arbitrate disputes. Contested funds remain safely held while awaiting independent arbitration."}
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => setIsDemoArbiterActive(!isDemoArbiterActive)}
+            className={cn(
+              "inline-flex items-center gap-1.5 rounded-xl px-4 py-2 text-xs font-bold transition-all shadow-xs shrink-0",
+              isDemoArbiterActive
+                ? "bg-purple-700 text-white hover:bg-purple-800 ring-2 ring-purple-300"
+                : "border border-purple-300 bg-white text-purple-800 hover:bg-purple-50"
+            )}
+          >
+            <Scale size={13} />
+            {isDemoArbiterActive ? "Exit Arbiter Mode" : "Simulate Demo Arbiter"}
+          </button>
+        </div>
+      )}
 
       {/* Filter and Search Bar */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-b border-[var(--color-border-subtle)] pb-4">
@@ -472,9 +515,9 @@ export function ClientPaymentsView() {
                           year: "numeric",
                         })}
                       </span>
-                      {item.escrowStatus === "DISPUTED" && item.disputeReason && (
-                        <span className="text-rose-600 font-medium">
-                          &bull; Reason: {item.disputeReason}
+                      {item.escrowStatus === "DISPUTED" && (
+                        <span className="text-amber-700 font-semibold inline-flex items-center gap-1">
+                          &bull; Awaiting Arbitration{item.disputeReason ? `: ${item.disputeReason}` : ""}
                         </span>
                       )}
                     </div>
@@ -533,24 +576,31 @@ export function ClientPaymentsView() {
 
                   {/* Actions for DISPUTED escrow */}
                   {item.escrowStatus === "DISPUTED" && (
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setResolveModalTarget({
-                          disputeId: item.disputeId || "",
-                          projectTitle: item.projectTitle,
-                          studentName: item.studentName,
-                          amount: item.amount,
-                          reason: item.disputeReason || "Deliverables disputed",
-                          description: item.disputeDescription || "Work deliverable dispute opened by client.",
-                          evidence: item.disputeEvidence,
-                        })
-                      }
-                      className="inline-flex items-center gap-1.5 rounded-xl bg-purple-600 px-3.5 py-2 text-xs font-semibold text-white shadow-xs hover:bg-purple-700 transition-colors shrink-0"
-                    >
-                      <Scale size={13} />
-                      Resolve Dispute (Arbiter)
-                    </button>
+                    isDemoArbiterActive ? (
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setResolveModalTarget({
+                            disputeId: item.disputeId || "",
+                            projectTitle: item.projectTitle,
+                            studentName: item.studentName,
+                            amount: item.amount,
+                            reason: item.disputeReason || "Deliverables disputed",
+                            description: item.disputeDescription || "Work deliverable dispute opened by client.",
+                            evidence: item.disputeEvidence,
+                          })
+                        }
+                        className="inline-flex items-center gap-1.5 rounded-xl bg-purple-600 px-3.5 py-2 text-xs font-semibold text-white shadow-xs hover:bg-purple-700 transition-colors shrink-0"
+                      >
+                        <Scale size={13} />
+                        Demo Arbitration
+                      </button>
+                    ) : (
+                      <div className="inline-flex items-center gap-1.5 rounded-xl border border-amber-200 bg-amber-50/80 px-3 py-2 text-xs font-medium text-amber-800 shrink-0">
+                        <Clock size={12} className="text-amber-600" />
+                        <span>Awaiting Arbitration</span>
+                      </div>
+                    )
                   )}
                 </div>
               </div>

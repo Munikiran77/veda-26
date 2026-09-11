@@ -7,6 +7,8 @@ import {
   Award,
   Sparkles,
   TrendingUp,
+  TrendingDown,
+  Minus,
   Info,
   CheckCircle2,
   X,
@@ -139,7 +141,7 @@ export function LivingSkillPassport({ passport, skills = [] }: LivingSkillPasspo
           {items.map((skill, index) => {
             const isMastery = skill.verificationLevel === "Mastery" || skill.score >= 92;
             const isVerified = skill.isVerified || skill.verificationLevel === "Project Verified" || isMastery;
-            const growth = skill.recentGrowth || (isVerified ? 8 : 0);
+            const growth = typeof skill.recentGrowth === "number" ? skill.recentGrowth : 0;
 
             return (
               <motion.div
@@ -160,10 +162,20 @@ export function LivingSkillPassport({ passport, skills = [] }: LivingSkillPasspo
                     <span className="font-bold text-sm text-[var(--color-text-primary)]">
                       {skill.name}
                     </span>
-                    {growth > 0 && (
+                    {growth > 0 ? (
                       <span className="inline-flex items-center gap-0.5 rounded-md bg-emerald-100 px-1.5 py-0.5 text-[10px] font-extrabold text-emerald-700">
                         <TrendingUp size={10} />
                         +{growth}
+                      </span>
+                    ) : growth < 0 ? (
+                      <span className="inline-flex items-center gap-0.5 rounded-md bg-rose-100 px-1.5 py-0.5 text-[10px] font-extrabold text-rose-700">
+                        <TrendingDown size={10} />
+                        {growth}
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-0.5 rounded-md bg-gray-100 px-1.5 py-0.5 text-[10px] font-bold text-gray-600">
+                        <Minus size={10} />
+                        0
                       </span>
                     )}
                   </div>
